@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #f0f2f7;
+  color: #1a1a2e;
+  min-height: 100vh;
+}
+
+input, select, button, textarea {
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ===== LOGIN ===== */
+.login-bg {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f0f2f7 60%, #e4f5ec 100%);
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 4px 32px rgba(24, 95, 165, 0.10);
+}
+
+.login-icon { font-size: 40px; text-align: center; margin-bottom: 16px; }
+.login-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: #888; text-align: center; margin-bottom: 24px; }
+.login-err { font-size: 12px; color: #A32D2D; margin-bottom: 8px; }
+.login-hint { font-size: 11px; color: #bbb; text-align: center; margin-top: 16px; }
+
+/* ===== FORM ===== */
+.fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.fg label { font-size: 12px; color: #666; font-weight: 500; }
+.fg input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+.fg input:focus { outline: none; border-color: #185FA5; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  background: #185FA5;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn:hover { background: #0C447C; }
+.btn-full { width: 100%; padding: 12px; }
+
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-sm:hover { background: #f0f4f8; }
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  opacity: 0.4;
+  padding: 2px 4px;
+  transition: opacity 0.15s;
+}
+.btn-remove:hover { opacity: 1; color: #993C1D; }
+
+/* ===== MICROPHONE ===== */
+.mic-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mic-btn:hover { background: #f0f4f8; }
+.mic-btn.listening {
+  background: #FAECE7;
+  border-color: #F0997B;
+  animation: micpulse 1s ease-in-out infinite;
+}
+@keyframes micpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.voice-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 13px;
+  padding: 9px 20px;
+  border-radius: 20px;
+  z-index: 9999;
+  white-space: nowrap;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-exp { background: #FAECE7; color: #993C1D; }
+.badge-profit { background: #EAF3DE; color: #3B6D11; }
+.badge-loss { background: #FCEBEB; color: #A32D2D; }
+
+/* ===== COLORS ===== */
+.inc { color: #0F6E56; }
+.exp { color: #993C1D; }
+.bal { color: #185FA5; }
+.profit { color: #3B6D11; }
+.loss { color: #A32D2D; }
+.text-right { text-align: right; }
+
+/* ===== TABLE ===== */
+.report-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.report-table th {
+  text-align: left;
+  padding: 8px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  border-bottom: 1px solid #eee;
+}
+.report-table td {
+  padding: 8px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+.report-table tr:last-child td { border-bottom: none; }
+
+.empty-msg { font-size: 13px; color: #aaa; padding: 12px 0; }
