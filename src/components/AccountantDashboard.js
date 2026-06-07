@@ -24,6 +24,16 @@ function defaultIncRows() {
   ];
 }
 
+function getPrevReport(reports, currentDate) {
+  return reports.find(r => r.date < currentDate) || null;
+}
+
+function calcChange(current, prev) {
+  if (!prev || prev === 0) return null;
+  const pct = ((current - prev) / prev) * 100;
+  return pct.toFixed(1);
+}
+
 export default function AccountantDashboard({ onLogout, reports, onSave }) {
   const [tab, setTab] = useState('today');
   const [reportDate, setReportDate] = useState(today);
@@ -35,7 +45,11 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
   const totalExp = expRows.reduce((s, r) => s + (r.total || 0), 0);
   const balance = totalInc - totalExp;
 
-  // Load existing report when date changes
+  const prevReport = getPrevReport(reports, reportDate);
+  const incChange = calcChange(totalInc, prevReport?.totalInc);
+  const expChange = calcChange(totalExp, prevReport?.totalExp);
+  const balChange = calcChange(balance, prevReport?.balance);
+
   useEffect(() => {
     const existing = reports.find(r => r.date === reportDate);
     if (existing) {
@@ -48,14 +62,7 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
   }, [reportDate, reports]);
 
   function handleSave() {
-    onSave({
-      date: reportDate,
-      incRows,
-      expRows,
-      totalInc,
-      totalExp,
-      balance,
-    });
+    onSave({ date: reportDate, incRows, expRows, totalInc, totalExp, balance });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -70,6 +77,16 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
   function loadReport(date) {
     setReportDate(date);
     setTab('today');
+  }
+
+  function ChangeTag({ value }) {
+    if (value === null) return <span className="change-tag neutral">— vs last report</span>;
+    const up = parseFloat(value) >= 0;
+    return (
+      <span className={`change-tag ${up ? 'up' : 'down'}`}>
+        {up ? '▲' : '▼'} {Math.abs(value)}% vs last report
+      </span>
+    );
   }
 
   return (
@@ -98,50 +115,62 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
       </div>
 
       {tab === 'today' && (
-        <div className="card">
-          <div className="report-header">
-            <div>
-              <div className="report-date-label">{fmtDate(reportDate)}</div>
-              <div className="report-sub">Daily finance report</div>
+        <>
+          {/* ── SUMMARY WIDGETS ── */}
+          <div className="summary-widgets">
+            <div className="widget">
+              <div className="widget-label">Total balance</div>
+              <div className={`widget-value ${balance >= 0 ? 'bal' : 'loss'}`}>
+                {fmt(balance)}
+              </div>
+              <ChangeTag value={balChange} />
             </div>
-            <input
-              type="date"
-              value={reportDate}
-              onChange={e => setReportDate(e.target.value)}
-            />
-          </div>
-
-          <p className="voice-hint">
-            🎤 Tap the microphone button next to any amount field to speak the value
-          </p>
-
-          <div className="section-title">Income</div>
-          <IncomeTable rows={incRows} onChange={setIncRows} />
-
-          <div className="section-title" style={{ marginTop: '1.4rem' }}>Expenses</div>
-          <ExpenseTable rows={expRows} onChange={setExpRows} />
-
-          <div className="summary-block">
-            <div className="summary-row">
-              <span>Total income</span>
-              <span className="inc">{fmt(totalInc)}</span>
+            <div className="widget">
+              <div className="widget-label">Income</div>
+              <div className="widget-value inc">{fmt(totalInc)}</div>
+              <ChangeTag value={incChange} />
             </div>
-            <div className="summary-row">
-              <span>Total expenses</span>
-              <span className="exp">{fmt(totalExp)}</span>
-            </div>
-            <div className="summary-row total-row">
-              <span>Balance carried forward</span>
-              <span style={{ color: balance >= 0 ? '#185FA5' : '#A32D2D' }}>{fmt(balance)}</span>
+            <div className="widget">
+              <div className="widget-label">Expense</div>
+              <div className="widget-value exp">{fmt(totalExp)}</div>
+              <ChangeTag value={expChange} />
             </div>
           </div>
 
-          <div className="form-actions">
-            <button className="btn-sm" onClick={handleClear}>Clear</button>
-            <button className="btn" onClick={handleSave}>✓ Save report</button>
+          {/* ── REPORT FORM ── */}
+          <div className="card">
+            <div className="report-header">
+              <div>
+                <div className="report-date-label">{fmtDate(reportDate)}</div>
+                <div className="report-sub">Daily finance report</div>
+              </div>
+              <input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} />
+            </div>
+
+            <p className="voice-hint">
+              🎤 Tap the microphone button next to any amount field to speak the value
+            </p>
+
+            {/* ── TWO COLUMNS ── */}
+            <div className="two-columns">
+              <div className="col-block">
+                <div className="section-title">Income</div>
+                <IncomeTable rows={incRows} onChange={setIncRows} />
+              </div>
+              <div className="col-divider" />
+              <div className="col-block">
+                <div className="section-title">Expenses</div>
+                <ExpenseTable rows={expRows} onChange={setExpRows} />
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button className="btn-sm" onClick={handleClear}>Clear</button>
+              <button className="btn" onClick={handleSave}>✓ Save report</button>
+            </div>
+            {saved && <p className="save-msg">✅ Report saved successfully.</p>}
           </div>
-          {saved && <p className="save-msg">✅ Report saved successfully.</p>}
-        </div>
+        </>
       )}
 
       {tab === 'history' && (

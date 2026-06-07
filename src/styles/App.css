@@ -19,23 +19,54 @@ input, select, button, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f0fe 0%, #f0f2f7 60%, #e4f5ec 100%);
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.login-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 30, 60, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 0;
 }
 
 .login-card {
-  background: #fff;
-  border-radius: 16px;
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 20px;
   padding: 40px 36px;
   width: 100%;
-  max-width: 380px;
-  box-shadow: 0 4px 32px rgba(24, 95, 165, 0.10);
+  max-width: 400px;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.45);
 }
 
 .login-icon { font-size: 40px; text-align: center; margin-bottom: 16px; }
-.login-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 4px; }
-.login-sub { font-size: 13px; color: #888; text-align: center; margin-bottom: 24px; }
-.login-err { font-size: 12px; color: #A32D2D; margin-bottom: 8px; }
-.login-hint { font-size: 11px; color: #bbb; text-align: center; margin-top: 16px; }
+.login-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 4px; color: #fff; }
+.login-sub { font-size: 13px; color: rgba(255,255,255,0.75); text-align: center; margin-bottom: 24px; }
+.login-err { font-size: 12px; color: #ffb3b3; margin-bottom: 8px; }
+.login-hint { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 16px; }
+.login-hint b { color: rgba(255,255,255,0.8); }
+
+/* login form overrides */
+.login-card .fg label { color: rgba(255,255,255,0.85); }
+.login-card .fg input {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+}
+.login-card .fg input::placeholder { color: rgba(255,255,255,0.45); }
+.login-card .fg input:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.25);
+}
 
 /* ===== FORM ===== */
 .fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
