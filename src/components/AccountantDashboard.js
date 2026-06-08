@@ -119,19 +119,28 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
           {/* ── SUMMARY WIDGETS ── */}
           <div className="summary-widgets">
             <div className="widget">
-              <div className="widget-label">Total balance</div>
+              <div className="widget-top">
+                <div className="widget-label">Total balance</div>
+                <div className="widget-icon bal">💰</div>
+              </div>
               <div className={`widget-value ${balance >= 0 ? 'bal' : 'loss'}`}>
                 {fmt(balance)}
               </div>
               <ChangeTag value={balChange} />
             </div>
             <div className="widget">
-              <div className="widget-label">Income</div>
+              <div className="widget-top">
+                <div className="widget-label">Income</div>
+                <div className="widget-icon inc">📥</div>
+              </div>
               <div className="widget-value inc">{fmt(totalInc)}</div>
               <ChangeTag value={incChange} />
             </div>
             <div className="widget">
-              <div className="widget-label">Expense</div>
+              <div className="widget-top">
+                <div className="widget-label">Expense</div>
+                <div className="widget-icon exp">📤</div>
+              </div>
               <div className="widget-value exp">{fmt(totalExp)}</div>
               <ChangeTag value={expChange} />
             </div>
@@ -154,12 +163,12 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
             {/* ── TWO COLUMNS ── */}
             <div className="two-columns">
               <div className="col-block">
-                <div className="section-title">Income</div>
+                <div className="section-title income-title">📥 Income</div>
                 <IncomeTable rows={incRows} onChange={setIncRows} />
               </div>
               <div className="col-divider" />
               <div className="col-block">
-                <div className="section-title">Expenses</div>
+                <div className="section-title expense-title">📤 Expenses</div>
                 <ExpenseTable rows={expRows} onChange={setExpRows} />
               </div>
             </div>
