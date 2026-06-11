@@ -4,7 +4,7 @@ A practical web application that simplifies daily financial record-keeping for s
 
 ---
 
-## 📌 Overview
+##  Overview
 
 Schools often track daily income and expenditure using Excel spreadsheets — a process that is time-consuming, error-prone, and hard to access across multiple devices. **Daily Finance Reporter** solves this by providing a clean, role-based web interface where:
 
@@ -13,14 +13,13 @@ Schools often track daily income and expenditure using Excel spreadsheets — a 
 
 ---
 
-## ✨ Features
+##  Features
 
 ### Accountant
 - 📝 Create a daily finance report with income and expense entries
 - 📥 Income items — balance b/f, withdrawals, collections, and custom items
 - 📤 Expense items — grouped by category (Sports, Food & Kitchen, Salaries, Medical, Transport, etc.)
 - 🔢 Auto-calculation — enter quantity × unit price and total is computed automatically
-- 🎤 Voice input — speak the amount instead of typing (requires HTTPS or localhost)
 - ✏️ Edit past reports — click any saved report to load and update it
 - ⚠️ Duplicate detection — warns if a report for that date already exists
 - ⬇️ Export all reports to CSV
@@ -66,7 +65,7 @@ daily-finance-reporter/
 │   │   │   ├── DirectorDashboard.js
 │   │   │   ├── IncomeTable.js
 │   │   │   ├── ExpenseTable.js
-│   │   │   └── VoiceInputButton.js
+│   │   │   
 │   │   ├── styles/
 │   │   │   ├── App.css
 │   │   │   └── Dashboard.css
