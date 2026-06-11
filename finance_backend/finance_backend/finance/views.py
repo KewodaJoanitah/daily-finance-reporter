@@ -1,12 +1,13 @@
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics
+from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Sum
+import traceback
 
-from .models import User, DailyReport
+from .models import User, DailyReport, IncomeEntry, ExpenseEntry
 from .serializers import (
     LoginSerializer, UserSerializer,
     DailyReportSerializer, DailyReportSummarySerializer,
@@ -20,17 +21,14 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
-
         user = authenticate(request, username=username, password=password)
         if user is None:
             return Response(
                 {'error': 'Invalid username or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -44,16 +42,14 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
+            token = RefreshToken(request.data.get('refresh'))
             token.blacklist()
-            return Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Logged out successfully.'})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MeView(APIView):
-    """Return current logged-in user info."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -64,13 +60,10 @@ class DailyReportListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """List all reports — summary only for speed."""
         reports = DailyReport.objects.all()
-        serializer = DailyReportSummarySerializer(reports, many=True)
-        return Response(serializer.data)
+        return Response(DailyReportSummarySerializer(reports, many=True).data)
 
     def post(self, request):
-        """Create or update today's report (accountant only)."""
         if request.user.role != 'accountant':
             return Response(
                 {'error': 'Only accountants can save reports.'},
@@ -78,47 +71,91 @@ class DailyReportListCreateView(APIView):
             )
 
         date = request.data.get('date')
-        existing = DailyReport.objects.filter(date=date).first()
+        income_entries = request.data.get('income_entries', [])
+        expense_entries = request.data.get('expense_entries', [])
 
-        if existing:
-            # Update existing report
-            serializer = DailyReportSerializer(existing, data=request.data)
-        else:
-            # Create new report
-            serializer = DailyReportSerializer(data=request.data)
+        try:
+            is_update = request.data.get('is_update', False)
+            existing = DailyReport.objects.filter(date=date).first()
 
-        if serializer.is_valid():
-            report = serializer.save(created_by=request.user)
+            if existing and not is_update:
+                # Report exists but not in edit mode — warn user
+                from datetime import datetime
+                fmt_date = datetime.strptime(date, '%Y-%m-%d').strftime('%A, %d %B %Y')
+                return Response(
+                    {
+                        'error': 'duplicate',
+                        'message': f'A report for {fmt_date} already exists. Please edit the existing report instead.',
+                        'date': date,
+                    },
+                    status=status.HTTP_409_CONFLICT
+                )
+
+            if existing and is_update:
+                # Edit mode — update existing report
+                report = existing
+                report.income_entries.all().delete()
+                report.expense_entries.all().delete()
+            else:
+                # Create new report
+                report = DailyReport.objects.create(date=date, created_by=request.user)
+
+            # Create income entries
+            for i, entry in enumerate(income_entries):
+                IncomeEntry.objects.create(
+                    report=report,
+                    label=entry.get('label', ''),
+                    amount=float(entry.get('amount', 0) or 0),
+                    order=i
+                )
+
+            # Create expense entries
+            for i, entry in enumerate(expense_entries):
+                qty = entry.get('qty')
+                unit_price = entry.get('unit_price')
+                qty = float(qty) if qty not in (None, '', 'null') else None
+                unit_price = float(unit_price) if unit_price not in (None, '', 'null') else None
+
+                ExpenseEntry.objects.create(
+                    report=report,
+                    category=entry.get('category', 'Other expenses'),
+                    item=entry.get('item', ''),
+                    qty=qty,
+                    unit_price=unit_price,
+                    order=i
+                )
+
+            # Recalculate totals
+            report.recalculate_totals()
+
             return Response(DailyReportSerializer(report).data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DailyReportDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, date):
-        """Get full report for a specific date including all entries."""
         try:
             report = DailyReport.objects.get(date=date)
             return Response(DailyReportSerializer(report).data)
         except DailyReport.DoesNotExist:
-            return Response({'error': 'No report found for this date.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'No report for this date.'}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, date):
-        """Delete a report (accountant only)."""
         if request.user.role != 'accountant':
             return Response({'error': 'Only accountants can delete reports.'}, status=status.HTTP_403_FORBIDDEN)
         try:
-            report = DailyReport.objects.get(date=date)
-            report.delete()
-            return Response({'message': 'Report deleted.'}, status=status.HTTP_200_OK)
+            DailyReport.objects.get(date=date).delete()
+            return Response({'message': 'Report deleted.'})
         except DailyReport.DoesNotExist:
             return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class SummaryView(APIView):
-    """Overall totals across all reports — for director dashboard."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

@@ -22,6 +22,11 @@ function defaultIncRows() {
   ];
 }
 
+function calcChange(current, prev) {
+  if (!prev || prev === 0) return null;
+  return (((current - prev) / prev) * 100).toFixed(1);
+}
+
 function ChangeTag({ value }) {
   if (value === null) return <span className="change-tag neutral">— vs last report</span>;
   const up = parseFloat(value) >= 0;
@@ -32,9 +37,21 @@ function ChangeTag({ value }) {
   );
 }
 
-function calcChange(current, prev) {
-  if (!prev || prev === 0) return null;
-  return (((current - prev) / prev) * 100).toFixed(1);
+// ── Modal component ──
+function Modal({ message, onClose, onEdit }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-icon">⚠️</div>
+        <h3 className="modal-title">Report already exists</h3>
+        <p className="modal-msg">{message}</p>
+        <div className="modal-actions">
+          <button className="btn-sm" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onEdit}>Edit existing report</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function AccountantDashboard({ onLogout, user }) {
@@ -42,16 +59,17 @@ export default function AccountantDashboard({ onLogout, user }) {
   const [reportDate, setReportDate] = useState(today);
   const [incRows, setIncRows] = useState(defaultIncRows());
   const [expRows, setExpRows] = useState([]);
-  const [reports, setReports] = useState([]); // summary list
+  const [reports, setReports] = useState([]);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // true = editing existing report
+  const [modal, setModal] = useState(null); // { message, date }
 
   const totalInc = incRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const totalExp = expRows.reduce((s, r) => s + (r.total || 0), 0);
   const balance = totalInc - totalExp;
 
-  // Find previous report for change % calculation
   const prevReport = reports.find(r => r.date < reportDate) || null;
   const incChange = calcChange(totalInc, prevReport?.total_income);
   const expChange = calcChange(totalExp, prevReport?.total_expense);
@@ -64,11 +82,13 @@ export default function AccountantDashboard({ onLogout, user }) {
       .catch(err => console.error('Failed to load reports:', err));
   }, []);
 
-  // Load specific report when date changes
+  // Load report when date changes
   useEffect(() => {
     setLoadingReport(true);
+    setIsEditing(false);
     getReport(reportDate)
       .then(data => {
+        // Report exists for this date — load it in edit mode
         setIncRows(data.income_entries.map(e => ({
           id: e.id,
           label: e.label,
@@ -82,11 +102,13 @@ export default function AccountantDashboard({ onLogout, user }) {
           unit: e.unit_price || '',
           total: parseFloat(e.total) || 0,
         })));
+        setIsEditing(true);
       })
       .catch(() => {
-        // No report for this date — start fresh
+        // No report for this date — fresh form
         setIncRows(defaultIncRows());
         setExpRows([]);
+        setIsEditing(false);
       })
       .finally(() => setLoadingReport(false));
   }, [reportDate]);
@@ -106,26 +128,40 @@ export default function AccountantDashboard({ onLogout, user }) {
         expense_entries: expRows.map((r, i) => ({
           category: r.cat,
           item: r.item || '',
-          qty: r.qty !== '' && r.qty !== null && r.qty !== undefined
-            ? parseFloat(r.qty) : null,
-          unit_price: r.unit !== '' && r.unit !== null && r.unit !== undefined
-            ? parseFloat(r.unit) : null,
+          qty: r.qty !== '' && r.qty !== null && r.qty !== undefined ? parseFloat(r.qty) : null,
+          unit_price: r.unit !== '' && r.unit !== null && r.unit !== undefined ? parseFloat(r.unit) : null,
           order: i,
         })),
+        is_update: isEditing, // tell backend this is an update
       };
-      console.log('Saving payload:', JSON.stringify(payload, null, 2));
+
       await apiSaveReport(payload);
-      // Refresh summary list
       const updated = await getReports();
       setReports(updated);
+      setIsEditing(true);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      alert('Failed to save report. Please try again.');
-      console.error(err);
+      // Handle duplicate report (409)
+      if (err.response?.status === 409) {
+        const data = err.response.data;
+        setModal({ message: data.message, date: data.date });
+      } else {
+        alert('Failed to save report. Please try again.');
+        console.error(err);
+      }
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleEditExisting() {
+    // Modal confirmed — switch to edit mode for that date
+    if (modal?.date) {
+      setReportDate(modal.date);
+      setIsEditing(true);
+    }
+    setModal(null);
   }
 
   function handleClear() {
@@ -142,6 +178,15 @@ export default function AccountantDashboard({ onLogout, user }) {
 
   return (
     <div className="page">
+      {/* Duplicate report modal */}
+      {modal && (
+        <Modal
+          message={modal.message}
+          onClose={() => setModal(null)}
+          onEdit={handleEditExisting}
+        />
+      )}
+
       <div className="topbar">
         <div className="user-info">
           <div className="avatar">AC</div>
@@ -157,14 +202,18 @@ export default function AccountantDashboard({ onLogout, user }) {
       </div>
 
       <div className="tabs">
-        <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}>Today's report</button>
-        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Past reports</button>
+        <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}>
+          {isEditing ? '✏️ Edit report' : "Today's report"}
+        </button>
+        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
+          Past reports
+        </button>
       </div>
 
       {tab === 'today' && (
         <>
           {/* WIDGETS */}
-          <div className="summary-widgets">
+          <div className="summary-widgets five-col">
             <div className="widget w-bal">
               <div className="widget-top">
                 <div className="widget-label">Total balance</div>
@@ -189,6 +238,30 @@ export default function AccountantDashboard({ onLogout, user }) {
               <div className="widget-value">{fmt(totalExp)}</div>
               <ChangeTag value={expChange} />
             </div>
+            <div className="widget w-profit">
+              <div className="widget-top">
+                <div className="widget-label">Profit</div>
+                <div className="widget-icon profit-icon">📈</div>
+              </div>
+              <div className="widget-value profit">
+                {balance > 0 ? fmt(balance) : fmt(0)}
+              </div>
+              <span className="profit-badge pos">
+                {balance > 0 ? '▲ In profit' : '— No profit yet'}
+              </span>
+            </div>
+            <div className="widget w-loss">
+              <div className="widget-top">
+                <div className="widget-label">Loss</div>
+                <div className="widget-icon loss-icon">📉</div>
+              </div>
+              <div className="widget-value loss">
+                {balance < 0 ? fmt(Math.abs(balance)) : fmt(0)}
+              </div>
+              <span className="profit-badge neg">
+                {balance < 0 ? '▼ In loss' : '— No loss'}
+              </span>
+            </div>
           </div>
 
           {/* FORM */}
@@ -196,10 +269,23 @@ export default function AccountantDashboard({ onLogout, user }) {
             <div className="report-header">
               <div>
                 <div className="report-date-label">{fmtDate(reportDate)}</div>
-                <div className="report-sub">Daily finance report {loadingReport && '— loading...'}</div>
+                <div className="report-sub">
+                  {loadingReport
+                    ? 'Loading...'
+                    : isEditing
+                    ? '✏️ Editing existing report'
+                    : '📝 New report'}
+                </div>
               </div>
               <input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} />
             </div>
+
+            {/* Edit mode banner */}
+            {isEditing && (
+              <div className="edit-banner">
+                ✏️ You are editing an existing report for <b>{fmtDate(reportDate)}</b>. Changes will overwrite the saved data.
+              </div>
+            )}
 
             <div className="two-columns">
               <div className="col-block">
@@ -216,17 +302,21 @@ export default function AccountantDashboard({ onLogout, user }) {
             <div className="form-actions">
               <button className="btn-sm" onClick={handleClear}>Clear</button>
               <button className="btn" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : '✓ Save report'}
+                {saving ? 'Saving...' : isEditing ? '✏️ Update report' : '✓ Save report'}
               </button>
             </div>
-            {saved && <p className="save-msg">✅ Report saved successfully.</p>}
+            {saved && (
+              <p className="save-msg">
+                ✅ Report {isEditing ? 'updated' : 'saved'} successfully.
+              </p>
+            )}
           </div>
         </>
       )}
 
       {tab === 'history' && (
         <div className="card">
-          <h3 className="card-title">Saved reports</h3>
+          <h3 className="card-title">Saved reports — click any to edit</h3>
           {reports.length === 0 ? (
             <p className="empty-msg">No saved reports yet.</p>
           ) : (
@@ -234,9 +324,12 @@ export default function AccountantDashboard({ onLogout, user }) {
               <div key={r.date} className="day-card" onClick={() => loadReport(r.date)}>
                 <div className="day-card-head">
                   <span className="day-date">{fmtDate(r.date)}</span>
-                  <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`}>
-                    {parseFloat(r.balance) >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(r.balance))}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="edit-tag">✏️ Edit</span>
+                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`}>
+                      {parseFloat(r.balance) >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(r.balance))}
+                    </span>
+                  </div>
                 </div>
                 <div className="day-card-meta">
                   <span>Income: <b className="inc">{fmt(r.total_income)}</b></span>

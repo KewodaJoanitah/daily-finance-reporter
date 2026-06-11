@@ -20,6 +20,13 @@ class IncomeEntrySerializer(serializers.ModelSerializer):
 
 
 class ExpenseEntrySerializer(serializers.ModelSerializer):
+    qty = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
+    unit_price = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False, allow_null=True
+    )
+
     class Meta:
         model = ExpenseEntry
         fields = ['id', 'category', 'item', 'qty', 'unit_price', 'total', 'order']
@@ -55,6 +62,8 @@ class DailyReportSerializer(serializers.ModelSerializer):
             IncomeEntry.objects.create(report=report, order=i, **entry)
 
         for i, entry in enumerate(expense_data):
+            # Remove 'total' if present since it's auto-calculated
+            entry.pop('total', None)
             ExpenseEntry.objects.create(report=report, order=i, **entry)
 
         report.recalculate_totals()
@@ -64,11 +73,9 @@ class DailyReportSerializer(serializers.ModelSerializer):
         income_data = validated_data.pop('income_entries', [])
         expense_data = validated_data.pop('expense_entries', [])
 
-        # Update report fields
         instance.date = validated_data.get('date', instance.date)
         instance.save()
 
-        # Replace all entries
         instance.income_entries.all().delete()
         instance.expense_entries.all().delete()
 
@@ -76,6 +83,7 @@ class DailyReportSerializer(serializers.ModelSerializer):
             IncomeEntry.objects.create(report=instance, order=i, **entry)
 
         for i, entry in enumerate(expense_data):
+            entry.pop('total', None)
             ExpenseEntry.objects.create(report=instance, order=i, **entry)
 
         instance.recalculate_totals()

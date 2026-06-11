@@ -9,19 +9,141 @@ function fmtDate(d) {
   });
 }
 
+function ReportDetailModal({ date, onClose }) {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getReport(date)
+      .then(data => setReport(data))
+      .catch(() => setReport(null))
+      .finally(() => setLoading(false));
+  }, [date]);
+
+  const profit = report ? parseFloat(report.balance) : 0;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="detail-modal" onClick={e => e.stopPropagation()}>
+        <div className="detail-modal-header">
+          <div>
+            <div className="detail-modal-date">{fmtDate(date)}</div>
+            <div className="report-sub">Full report details</div>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        {loading ? (
+          <p className="empty-msg" style={{ textAlign: 'center', padding: '2rem' }}>Loading report...</p>
+        ) : !report ? (
+          <p className="empty-msg">Could not load report.</p>
+        ) : (
+          <>
+            {/* Summary metrics */}
+            <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: '1.2rem' }}>
+              <div className="metric">
+                <div className="mlabel">Income</div>
+                <div className="mval inc">{fmt(report.total_income)}</div>
+              </div>
+              <div className="metric">
+                <div className="mlabel">Expenses</div>
+                <div className="mval exp">{fmt(report.total_expense)}</div>
+              </div>
+              <div className="metric">
+                <div className="mlabel">Balance</div>
+                <div className={`mval ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(report.balance)}</div>
+              </div>
+              <div className="metric" style={{ background: profit >= 0 ? '#E1F5EE' : '#FAECE7' }}>
+                <div className="mlabel">{profit >= 0 ? 'Profit' : 'Loss'}</div>
+                <div className={`mval ${profit >= 0 ? 'profit' : 'loss'}`}>
+                  {profit >= 0 ? '📈' : '📉'} {fmt(Math.abs(profit))}
+                </div>
+              </div>
+            </div>
+
+            {/* Income table */}
+            <div className="detail-section-title inc-title">📥 Income</div>
+            <table className="report-table" style={{ marginBottom: 20 }}>
+              <thead>
+                <tr><th>Item</th><th className="text-right">Amount</th></tr>
+              </thead>
+              <tbody>
+                {report.income_entries.filter(r => parseFloat(r.amount) > 0).length === 0 ? (
+                  <tr><td colSpan={2} className="empty-msg">No income entries</td></tr>
+                ) : report.income_entries.filter(r => parseFloat(r.amount) > 0).map(r => (
+                  <tr key={r.id}>
+                    <td>{r.label}</td>
+                    <td className="text-right inc" style={{ fontWeight: 600 }}>{fmt(r.amount)}</td>
+                  </tr>
+                ))}
+                <tr style={{ fontWeight: 700, background: '#f8f9fc' }}>
+                  <td>Total income</td>
+                  <td className="text-right inc">{fmt(report.total_income)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Expense table */}
+            <div className="detail-section-title exp-title">📤 Expenses</div>
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>Category</th><th>Item</th>
+                  <th className="text-right">Qty</th>
+                  <th className="text-right">Unit price</th>
+                  <th className="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.expense_entries.length === 0 ? (
+                  <tr><td colSpan={5} className="empty-msg">No expense entries</td></tr>
+                ) : report.expense_entries.map(r => (
+                  <tr key={r.id}>
+                    <td><span className="badge badge-exp">{r.category}</span></td>
+                    <td>{r.item || '—'}</td>
+                    <td className="text-right">{r.qty || '—'}</td>
+                    <td className="text-right">{r.unit_price ? fmt(r.unit_price) : '—'}</td>
+                    <td className="text-right exp" style={{ fontWeight: 600 }}>{fmt(r.total)}</td>
+                  </tr>
+                ))}
+                <tr style={{ fontWeight: 700, background: '#f8f9fc' }}>
+                  <td colSpan={4}>Total expenses</td>
+                  <td className="text-right exp">{fmt(report.total_expense)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Balance summary */}
+            <div className={`profit-banner ${profit >= 0 ? 'pos' : 'neg'}`} style={{ marginTop: 16 }}>
+              <div>
+                <div className="pl">Balance carried forward</div>
+                <div className="pv">{fmt(report.balance)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="pl">{profit >= 0 ? 'Net profit' : 'Net loss'}</div>
+                <div className="pv-sm">{fmt(Math.abs(profit))}</div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DirectorDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('overview');
   const [reports, setReports] = useState([]);
   const [summary, setSummary] = useState(null);
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null); // for modal
 
   useEffect(() => {
     Promise.all([getReports(), getSummary()])
       .then(([reps, sum]) => {
         setReports(reps);
         setSummary(sum);
-        // Load full latest report
         if (reps.length > 0) {
           return getReport(reps[0].date).then(full => setLatest(full));
         }
@@ -38,6 +160,11 @@ export default function DirectorDashboard({ onLogout, user }) {
 
   return (
     <div className="page">
+      {/* Report detail modal */}
+      {selectedDate && (
+        <ReportDetailModal date={selectedDate} onClose={() => setSelectedDate(null)} />
+      )}
+
       <div className="topbar">
         <div className="user-info">
           <div className="avatar director">DR</div>
@@ -49,15 +176,56 @@ export default function DirectorDashboard({ onLogout, user }) {
         <button className="btn-sm" onClick={onLogout}>Sign out</button>
       </div>
 
-      {/* SUMMARY METRICS */}
-      {summary && (
-        <div className="metrics-grid" style={{ marginBottom: '1.4rem' }}>
-          <div className="metric"><div className="mlabel">Total income</div><div className="mval inc">{fmt(summary.total_income)}</div></div>
-          <div className="metric"><div className="mlabel">Total expenses</div><div className="mval exp">{fmt(summary.total_expense)}</div></div>
-          <div className="metric"><div className="mlabel">Net balance</div><div className={`mval ${parseFloat(summary.total_balance) >= 0 ? 'profit' : 'loss'}`}>{fmt(summary.total_balance)}</div></div>
-          <div className="metric"><div className="mlabel">Reports saved</div><div className="mval">{summary.report_count}</div></div>
-        </div>
-      )}
+      {/* SUMMARY WIDGETS */}
+      {summary && (() => {
+        const inc = parseFloat(summary.total_income);
+        const exp = parseFloat(summary.total_expense);
+        const profit = inc - exp;
+        return (
+          <div className="summary-widgets five-col" style={{ marginBottom: '1.4rem' }}>
+            <div className="widget w-bal">
+              <div className="widget-top">
+                <div className="widget-label">Total balance</div>
+                <div className="widget-icon bal">💰</div>
+              </div>
+              <div className={`widget-value ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(profit)}</div>
+              <span className="change-tag neutral">{summary.report_count} reports total</span>
+            </div>
+            <div className="widget w-inc">
+              <div className="widget-top">
+                <div className="widget-label">Total income</div>
+                <div className="widget-icon inc">📥</div>
+              </div>
+              <div className="widget-value inc">{fmt(inc)}</div>
+              <span className="change-tag neutral">All time</span>
+            </div>
+            <div className="widget w-exp">
+              <div className="widget-top">
+                <div className="widget-label">Total expenses</div>
+                <div className="widget-icon exp">📤</div>
+              </div>
+              <div className="widget-value exp">{fmt(exp)}</div>
+              <span className="change-tag neutral">All time</span>
+            </div>
+            <div className="widget w-profit">
+              <div className="widget-top">
+                <div className="widget-label">Profit</div>
+                <div className="widget-icon profit-icon">📈</div>
+              </div>
+              <div className="widget-value profit">{profit > 0 ? fmt(profit) : fmt(0)}</div>
+              <span className="profit-badge pos">{profit > 0 ? '▲ Overall profit' : '— No profit yet'}</span>
+            </div>
+            <div className="widget w-loss">
+              <div className="widget-top">
+                <div className="widget-label">Loss</div>
+                <div className="widget-icon loss-icon">📉</div>
+              </div>
+              <div className="widget-value loss">{profit < 0 ? fmt(Math.abs(profit)) : fmt(0)}</div>
+              <span className="profit-badge neg">{profit < 0 ? '▼ Overall loss' : '— No loss'}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="tabs">
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Latest report</button>
@@ -82,30 +250,20 @@ export default function DirectorDashboard({ onLogout, user }) {
                   <div className="pv-sm">{fmt(latest.balance)}</div>
                 </div>
               </div>
-
               <div className="card">
                 <h3 className="card-title">Income</h3>
                 <table className="report-table" style={{ marginBottom: 16 }}>
                   <thead><tr><th>Item</th><th className="text-right">Amount</th></tr></thead>
                   <tbody>
                     {latest.income_entries.filter(r => r.amount > 0).map(r => (
-                      <tr key={r.id}>
-                        <td>{r.label}</td>
-                        <td className="text-right inc" style={{ fontWeight: 600 }}>{fmt(r.amount)}</td>
-                      </tr>
+                      <tr key={r.id}><td>{r.label}</td><td className="text-right inc" style={{ fontWeight: 600 }}>{fmt(r.amount)}</td></tr>
                     ))}
                   </tbody>
                 </table>
-
                 <h3 className="card-title">Expenses</h3>
                 <table className="report-table">
                   <thead>
-                    <tr>
-                      <th>Category</th><th>Item</th>
-                      <th className="text-right">Qty</th>
-                      <th className="text-right">Unit price</th>
-                      <th className="text-right">Total</th>
-                    </tr>
+                    <tr><th>Category</th><th>Item</th><th className="text-right">Qty</th><th className="text-right">Unit price</th><th className="text-right">Total</th></tr>
                   </thead>
                   <tbody>
                     {latest.expense_entries.length === 0 ? (
@@ -122,8 +280,7 @@ export default function DirectorDashboard({ onLogout, user }) {
                   </tbody>
                 </table>
                 <div className="total-row">
-                  <span>Total expenses</span>
-                  <span className="exp">{fmt(latest.total_expense)}</span>
+                  <span>Total expenses</span><span className="exp">{fmt(latest.total_expense)}</span>
                 </div>
               </div>
             </>
@@ -131,36 +288,52 @@ export default function DirectorDashboard({ onLogout, user }) {
         </div>
       )}
 
-      {/* ALL REPORTS */}
+      {/* ALL REPORTS — clickable */}
       {tab === 'daily' && (
         <div>
           {reports.length === 0 ? (
             <div className="card"><p className="empty-msg">No reports yet.</p></div>
           ) : (
-            reports.map(r => (
-              <div key={r.date} className="card" style={{ marginBottom: 12 }}>
-                <div className="day-card-head" style={{ marginBottom: 10 }}>
-                  <span className="day-date">{fmtDate(r.date)}</span>
-                  <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`}>
-                    {parseFloat(r.balance) >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(r.balance))}
-                  </span>
+            reports.map(r => {
+              const p = parseFloat(r.balance);
+              return (
+                <div
+                  key={r.date}
+                  className="day-card clickable-report"
+                  onClick={() => setSelectedDate(r.date)}
+                >
+                  <div className="day-card-head">
+                    <span className="day-date">{fmtDate(r.date)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="view-detail-tag">👁 View details</span>
+                      <span className={`badge ${p >= 0 ? 'badge-profit' : 'badge-loss'}`}>
+                        {p >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(p))}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginTop: 10 }}>
+                    <div className="metric" style={{ padding: '8px 12px' }}>
+                      <div className="mlabel">Income</div>
+                      <div className="mval inc" style={{ fontSize: 15 }}>{fmt(r.total_income)}</div>
+                    </div>
+                    <div className="metric" style={{ padding: '8px 12px' }}>
+                      <div className="mlabel">Expenses</div>
+                      <div className="mval exp" style={{ fontSize: 15 }}>{fmt(r.total_expense)}</div>
+                    </div>
+                    <div className="metric" style={{ padding: '8px 12px' }}>
+                      <div className="mlabel">Balance</div>
+                      <div className={`mval ${p >= 0 ? 'bal' : 'loss'}`} style={{ fontSize: 15 }}>{fmt(r.balance)}</div>
+                    </div>
+                    <div className="metric" style={{ padding: '8px 12px', background: p >= 0 ? '#E1F5EE' : '#FAECE7' }}>
+                      <div className="mlabel">{p >= 0 ? 'Profit' : 'Loss'}</div>
+                      <div className={`mval ${p >= 0 ? 'profit' : 'loss'}`} style={{ fontSize: 15 }}>
+                        {p >= 0 ? '📈' : '📉'} {fmt(Math.abs(p))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="metrics-grid">
-                  <div className="metric" style={{ padding: '8px 12px' }}>
-                    <div className="mlabel">Income</div>
-                    <div className="mval inc" style={{ fontSize: 15 }}>{fmt(r.total_income)}</div>
-                  </div>
-                  <div className="metric" style={{ padding: '8px 12px' }}>
-                    <div className="mlabel">Expenses</div>
-                    <div className="mval exp" style={{ fontSize: 15 }}>{fmt(r.total_expense)}</div>
-                  </div>
-                  <div className="metric" style={{ padding: '8px 12px' }}>
-                    <div className="mlabel">Balance</div>
-                    <div className="mval bal" style={{ fontSize: 15 }}>{fmt(r.balance)}</div>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

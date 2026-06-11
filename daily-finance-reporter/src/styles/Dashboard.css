@@ -270,3 +270,154 @@ body {
   .expense-grid { grid-template-columns: 1fr 45px 90px 65px 36px 34px; }
   .widget-value { font-size: 20px; }
 }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; backdrop-filter: blur(3px);
+}
+.modal-box {
+  background: #fff; border-radius: 20px;
+  padding: 32px 28px; width: 100%; max-width: 400px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+  text-align: center;
+}
+.modal-icon { font-size: 40px; margin-bottom: 12px; }
+.modal-title { font-size: 17px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+.modal-msg { font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+/* ===== EDIT BANNER ===== */
+.edit-banner {
+  background: linear-gradient(135deg, #FFF8E6, #FFF0C0);
+  border: 1.5px solid #F5C842;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #7A5500;
+  margin-bottom: 1.2rem;
+}
+.edit-tag {
+  font-size: 11px; font-weight: 600;
+  background: #EEF2FF; color: #185FA5;
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* ===== 4 COLUMN WIDGETS ===== */
+.summary-widgets.four-col {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Profit widget */
+.widget.w-profit::before { background: linear-gradient(90deg, #0F6E56, #2CC68F); }
+.widget.w-loss::before { background: linear-gradient(90deg, #993C1D, #F07048); }
+
+.widget-icon.profit-icon { background: #E1F5EE; }
+.widget-icon.loss-icon { background: #FAECE7; }
+
+.profit-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px;
+}
+.profit-badge.pos { background: #E1F5EE; color: #0F6E56; }
+.profit-badge.neg { background: #FAECE7; color: #993C1D; }
+
+@media (max-width: 900px) {
+  .summary-widgets.four-col { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .summary-widgets.four-col { grid-template-columns: 1fr; }
+}
+
+/* ===== 5 COLUMN WIDGETS ===== */
+.summary-widgets.five-col {
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 1000px) {
+  .summary-widgets.five-col { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 650px) {
+  .summary-widgets.five-col { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ===== REPORT DETAIL MODAL ===== */
+.detail-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.3);
+}
+
+.detail-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed #eef2ff;
+}
+
+.detail-modal-date {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 3px;
+}
+
+.modal-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.modal-close-btn:hover { background: #FAECE7; color: #993C1D; }
+
+.detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid;
+}
+.inc-title { color: #0F6E56; border-color: #E1F5EE; }
+.exp-title { color: #993C1D; border-color: #FAECE7; margin-top: 8px; }
+
+/* ===== CLICKABLE REPORT CARD ===== */
+.clickable-report {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.clickable-report:hover {
+  background: #EEF2FF;
+  border-color: #a5b4fc;
+  box-shadow: 0 6px 20px rgba(99,102,241,0.12);
+  transform: translateY(-2px);
+}
+
+.view-detail-tag {
+  font-size: 11px;
+  font-weight: 600;
+  background: #EEF2FF;
+  color: #185FA5;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #c7d2fe;
+}
