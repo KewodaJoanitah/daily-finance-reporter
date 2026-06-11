@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import IncomeTable from './IncomeTable';
 import ExpenseTable from './ExpenseTable';
+import { getReports, getReport, saveReport as apiSaveReport } from '../api';
 import { exportCSV } from '../utils/exportCSV';
 import '../styles/Dashboard.css';
 
@@ -11,10 +12,7 @@ function fmtDate(d) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 }
-
-function fmt(n) {
-  return 'UGX ' + Math.round(n).toLocaleString();
-}
+function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
 
 function defaultIncRows() {
   return [
@@ -24,47 +22,110 @@ function defaultIncRows() {
   ];
 }
 
-function getPrevReport(reports, currentDate) {
-  return reports.find(r => r.date < currentDate) || null;
+function ChangeTag({ value }) {
+  if (value === null) return <span className="change-tag neutral">— vs last report</span>;
+  const up = parseFloat(value) >= 0;
+  return (
+    <span className={`change-tag ${up ? 'up' : 'down'}`}>
+      {up ? '▲' : '▼'} {Math.abs(value)}% vs last report
+    </span>
+  );
 }
 
 function calcChange(current, prev) {
   if (!prev || prev === 0) return null;
-  const pct = ((current - prev) / prev) * 100;
-  return pct.toFixed(1);
+  return (((current - prev) / prev) * 100).toFixed(1);
 }
 
-export default function AccountantDashboard({ onLogout, reports, onSave }) {
+export default function AccountantDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('today');
   const [reportDate, setReportDate] = useState(today);
   const [incRows, setIncRows] = useState(defaultIncRows());
   const [expRows, setExpRows] = useState([]);
+  const [reports, setReports] = useState([]); // summary list
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
 
   const totalInc = incRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const totalExp = expRows.reduce((s, r) => s + (r.total || 0), 0);
   const balance = totalInc - totalExp;
 
-  const prevReport = getPrevReport(reports, reportDate);
-  const incChange = calcChange(totalInc, prevReport?.totalInc);
-  const expChange = calcChange(totalExp, prevReport?.totalExp);
+  // Find previous report for change % calculation
+  const prevReport = reports.find(r => r.date < reportDate) || null;
+  const incChange = calcChange(totalInc, prevReport?.total_income);
+  const expChange = calcChange(totalExp, prevReport?.total_expense);
   const balChange = calcChange(balance, prevReport?.balance);
 
+  // Load reports list on mount
   useEffect(() => {
-    const existing = reports.find(r => r.date === reportDate);
-    if (existing) {
-      setIncRows(existing.incRows);
-      setExpRows(existing.expRows);
-    } else {
-      setIncRows(defaultIncRows());
-      setExpRows([]);
-    }
-  }, [reportDate, reports]);
+    getReports()
+      .then(data => setReports(data))
+      .catch(err => console.error('Failed to load reports:', err));
+  }, []);
 
-  function handleSave() {
-    onSave({ date: reportDate, incRows, expRows, totalInc, totalExp, balance });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  // Load specific report when date changes
+  useEffect(() => {
+    setLoadingReport(true);
+    getReport(reportDate)
+      .then(data => {
+        setIncRows(data.income_entries.map(e => ({
+          id: e.id,
+          label: e.label,
+          amount: parseFloat(e.amount) || '',
+        })));
+        setExpRows(data.expense_entries.map(e => ({
+          id: e.id,
+          cat: e.category,
+          item: e.item,
+          qty: e.qty || '',
+          unit: e.unit_price || '',
+          total: parseFloat(e.total) || 0,
+        })));
+      })
+      .catch(() => {
+        // No report for this date — start fresh
+        setIncRows(defaultIncRows());
+        setExpRows([]);
+      })
+      .finally(() => setLoadingReport(false));
+  }, [reportDate]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = {
+        date: reportDate,
+        income_entries: incRows
+          .filter(r => r.label || r.amount)
+          .map((r, i) => ({
+            label: r.label || '',
+            amount: parseFloat(r.amount) || 0,
+            order: i,
+          })),
+        expense_entries: expRows.map((r, i) => ({
+          category: r.cat,
+          item: r.item || '',
+          qty: r.qty !== '' && r.qty !== null && r.qty !== undefined
+            ? parseFloat(r.qty) : null,
+          unit_price: r.unit !== '' && r.unit !== null && r.unit !== undefined
+            ? parseFloat(r.unit) : null,
+          order: i,
+        })),
+      };
+      console.log('Saving payload:', JSON.stringify(payload, null, 2));
+      await apiSaveReport(payload);
+      // Refresh summary list
+      const updated = await getReports();
+      setReports(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      alert('Failed to save report. Please try again.');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleClear() {
@@ -79,23 +140,13 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
     setTab('today');
   }
 
-  function ChangeTag({ value }) {
-    if (value === null) return <span className="change-tag neutral">— vs last report</span>;
-    const up = parseFloat(value) >= 0;
-    return (
-      <span className={`change-tag ${up ? 'up' : 'down'}`}>
-        {up ? '▲' : '▼'} {Math.abs(value)}% vs last report
-      </span>
-    );
-  }
-
   return (
     <div className="page">
       <div className="topbar">
         <div className="user-info">
           <div className="avatar">AC</div>
           <div>
-            <div className="user-name">Accountant</div>
+            <div className="user-name">{user?.first_name || 'Accountant'}</div>
             <div className="user-role">Daily finance entry</div>
           </div>
         </div>
@@ -106,61 +157,50 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
       </div>
 
       <div className="tabs">
-        <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}>
-          Today's report
-        </button>
-        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          Past reports
-        </button>
+        <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}>Today's report</button>
+        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Past reports</button>
       </div>
 
       {tab === 'today' && (
         <>
-          {/* ── SUMMARY WIDGETS ── */}
+          {/* WIDGETS */}
           <div className="summary-widgets">
-            <div className="widget">
+            <div className="widget w-bal">
               <div className="widget-top">
                 <div className="widget-label">Total balance</div>
                 <div className="widget-icon bal">💰</div>
               </div>
-              <div className={`widget-value ${balance >= 0 ? 'bal' : 'loss'}`}>
-                {fmt(balance)}
-              </div>
+              <div className={`widget-value ${balance >= 0 ? '' : 'loss'}`}>{fmt(balance)}</div>
               <ChangeTag value={balChange} />
             </div>
-            <div className="widget">
+            <div className="widget w-inc">
               <div className="widget-top">
                 <div className="widget-label">Income</div>
                 <div className="widget-icon inc">📥</div>
               </div>
-              <div className="widget-value inc">{fmt(totalInc)}</div>
+              <div className="widget-value">{fmt(totalInc)}</div>
               <ChangeTag value={incChange} />
             </div>
-            <div className="widget">
+            <div className="widget w-exp">
               <div className="widget-top">
                 <div className="widget-label">Expense</div>
                 <div className="widget-icon exp">📤</div>
               </div>
-              <div className="widget-value exp">{fmt(totalExp)}</div>
+              <div className="widget-value">{fmt(totalExp)}</div>
               <ChangeTag value={expChange} />
             </div>
           </div>
 
-          {/* ── REPORT FORM ── */}
+          {/* FORM */}
           <div className="card">
             <div className="report-header">
               <div>
                 <div className="report-date-label">{fmtDate(reportDate)}</div>
-                <div className="report-sub">Daily finance report</div>
+                <div className="report-sub">Daily finance report {loadingReport && '— loading...'}</div>
               </div>
               <input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} />
             </div>
 
-            <p className="voice-hint">
-              🎤 Tap the microphone button next to any amount field to speak the value
-            </p>
-
-            {/* ── TWO COLUMNS ── */}
             <div className="two-columns">
               <div className="col-block">
                 <div className="section-title income-title">📥 Income</div>
@@ -175,7 +215,9 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
 
             <div className="form-actions">
               <button className="btn-sm" onClick={handleClear}>Clear</button>
-              <button className="btn" onClick={handleSave}>✓ Save report</button>
+              <button className="btn" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : '✓ Save report'}
+              </button>
             </div>
             {saved && <p className="save-msg">✅ Report saved successfully.</p>}
           </div>
@@ -192,13 +234,13 @@ export default function AccountantDashboard({ onLogout, reports, onSave }) {
               <div key={r.date} className="day-card" onClick={() => loadReport(r.date)}>
                 <div className="day-card-head">
                   <span className="day-date">{fmtDate(r.date)}</span>
-                  <span className={`badge ${r.balance >= 0 ? 'badge-profit' : 'badge-loss'}`}>
-                    {r.balance >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(r.balance))}
+                  <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`}>
+                    {parseFloat(r.balance) >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(r.balance))}
                   </span>
                 </div>
                 <div className="day-card-meta">
-                  <span>Income: <b className="inc">{fmt(r.totalInc)}</b></span>
-                  <span>Expenses: <b className="exp">{fmt(r.totalExp)}</b></span>
+                  <span>Income: <b className="inc">{fmt(r.total_income)}</b></span>
+                  <span>Expenses: <b className="exp">{fmt(r.total_expense)}</b></span>
                 </div>
               </div>
             ))

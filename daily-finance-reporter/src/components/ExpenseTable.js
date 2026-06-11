@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import VoiceInputButton, { EXPENSE_CATEGORIES } from './VoiceInputButton';
+
+export const EXPENSE_CATEGORIES = [
+  'Sports', 'Food & kitchen', 'Utilities', 'Salaries',
+  'Transport', 'Medical', 'Stationery', 'Maintenance', 'Other expenses',
+];
 
 export default function ExpenseTable({ rows, onChange }) {
   const [selectedCat, setSelectedCat] = useState(EXPENSE_CATEGORIES[0]);
@@ -31,7 +35,6 @@ export default function ExpenseTable({ rows, onChange }) {
       {rows.length === 0 && (
         <p className="empty-msg">No expense items yet. Select a category and click Add.</p>
       )}
-
       {cats.map(cat => (
         <div key={cat}>
           <div className="cat-header">{cat}</div>
@@ -40,57 +43,28 @@ export default function ExpenseTable({ rows, onChange }) {
             <span className="text-right">Qty</span>
             <span className="text-right">Unit price</span>
             <span className="text-right">Total</span>
-            <span /><span />
+            <span />
           </div>
           {rows.filter(r => r.cat === cat).map(row => (
             <div key={row.id} className="expense-grid row-item">
-              <input
-                type="text"
-                value={row.item}
-                placeholder="Item description"
-                onChange={e => updateRow(row.id, 'item', e.target.value)}
-              />
-              <input
-                type="number"
-                value={row.qty}
-                placeholder="Qty"
-                className="text-right"
-                onChange={e => updateRow(row.id, 'qty', e.target.value)}
-              />
-              <input
-                type="number"
-                value={row.unit}
-                placeholder="Unit price"
-                className="text-right"
-                onChange={e => updateRow(row.id, 'unit', e.target.value)}
-              />
-              <span className="auto-calc">
-                UGX {(row.total || 0).toLocaleString()}
-              </span>
-              <VoiceInputButton
-                label={row.item || 'unit price'}
-                onValue={val => updateRow(row.id, 'unit', val)}
-              />
-              <button
-                type="button"
-                className="btn-icon btn-remove"
-                onClick={() => removeRow(row.id)}
-                title="Remove"
-              >
-                🗑
-              </button>
+              <input type="text" value={row.item} placeholder="Item description"
+                onChange={e => updateRow(row.id, 'item', e.target.value)} />
+              <input type="number" value={row.qty} placeholder="Qty" className="text-right"
+                onChange={e => updateRow(row.id, 'qty', e.target.value)} />
+              <input type="number" value={row.unit} placeholder="Unit price" className="text-right"
+                onChange={e => updateRow(row.id, 'unit', e.target.value)} />
+              <span className="auto-calc">UGX {(row.total || 0).toLocaleString()}</span>
+              <button type="button" className="btn-icon btn-remove"
+                onClick={() => removeRow(row.id)} title="Remove">🗑</button>
             </div>
           ))}
         </div>
       ))}
-
       <div className="add-row" style={{ marginTop: 10 }}>
         <select value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
           {EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
         </select>
-        <button type="button" className="btn-sm" onClick={addRow}>
-          + Add expense item
-        </button>
+        <button type="button" className="btn-sm" onClick={addRow}>+ Add expense item</button>
       </div>
     </div>
   );

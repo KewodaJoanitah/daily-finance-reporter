@@ -1,3 +1,4 @@
+import { login } from '../api';
 import React, { useState } from "react";
 import "../styles/App.css";
 
@@ -8,12 +9,16 @@ export default function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    const ok = onLogin(username, password);
-    if (!ok) setError("Invalid username or password.");
-    else setError("");
+  async function handleSubmit(e) {
+  e.preventDefault();
+  setError("");
+  try {
+    const user = await login(username, password); // import { login } from '../api'
+    onLogin(user);
+  } catch (err) {
+    setError("Invalid username or password.");
   }
+}
 
   return (
     <div

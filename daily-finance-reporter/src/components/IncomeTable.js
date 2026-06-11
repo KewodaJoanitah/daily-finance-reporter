@@ -1,15 +1,12 @@
 import React from 'react';
-import VoiceInputButton from './VoiceInputButton';
 
 export default function IncomeTable({ rows, onChange }) {
   function updateRow(id, field, value) {
     onChange(rows.map(r => r.id === id ? { ...r, [field]: value } : r));
   }
-
   function addRow() {
     onChange([...rows, { id: Date.now(), label: '', amount: '' }]);
   }
-
   function removeRow(id) {
     onChange(rows.filter(r => r.id !== id));
   }
@@ -20,9 +17,7 @@ export default function IncomeTable({ rows, onChange }) {
         <span>Item</span>
         <span className="text-right">Amount (UGX)</span>
         <span />
-        <span />
       </div>
-
       {rows.map(row => (
         <div key={row.id} className="income-grid row-item">
           <input
@@ -38,21 +33,10 @@ export default function IncomeTable({ rows, onChange }) {
             className="text-right"
             onChange={e => updateRow(row.id, 'amount', parseFloat(e.target.value) || '')}
           />
-          <VoiceInputButton
-            label={row.label || 'income'}
-            onValue={val => updateRow(row.id, 'amount', val)}
-          />
-          <button
-            type="button"
-            className="btn-icon btn-remove"
-            onClick={() => removeRow(row.id)}
-            title="Remove row"
-          >
-            🗑
-          </button>
+          <button type="button" className="btn-icon btn-remove"
+            onClick={() => removeRow(row.id)} title="Remove">🗑</button>
         </div>
       ))}
-
       <button type="button" className="btn-sm" onClick={addRow} style={{ marginTop: 8 }}>
         + Add income item
       </button>
