@@ -421,3 +421,77 @@ body {
   border-radius: 20px;
   border: 1px solid #c7d2fe;
 }
+
+/* ===== PERIOD TABS ===== */
+.period-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.2rem;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(12px);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  width: fit-content;
+}
+.period-tabs button {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.period-tabs button:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.period-tabs button.active {
+  background: linear-gradient(135deg, #185FA5, #3B9EE8);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(24,95,165,0.3);
+}
+
+/* ===== PERIOD SECTION TITLE ===== */
+.period-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  border-left: 3px solid #3B9EE8;
+}
+
+/* ===== SUB-REPORT ROW ===== */
+.sub-report-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-wrap: wrap;
+}
+.sub-report-row:hover { background: rgba(255,255,255,0.12); }
+.sub-report-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  min-width: 100px;
+}
+.sub-report-inc {
+  font-size: 12px;
+  color: #2CC68F;
+  font-weight: 500;
+}
+.sub-report-exp {
+  font-size: 12px;
+  color: #F07048;
+  font-weight: 500;
+}

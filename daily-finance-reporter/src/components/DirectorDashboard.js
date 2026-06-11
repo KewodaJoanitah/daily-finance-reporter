@@ -131,6 +131,252 @@ function ReportDetailModal({ date, onClose }) {
   );
 }
 
+
+// ── Helpers ──
+function getWeekKey(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay() + 1); // Monday
+  return start.toISOString().split('T')[0];
+}
+
+function getMonthKey(dateStr) { return dateStr.substring(0, 7); }
+function getYearKey(dateStr) { return dateStr.substring(0, 4); }
+
+function groupReports(reports, keyFn) {
+  const groups = {};
+  reports.forEach(r => {
+    const key = keyFn(r.date);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  return groups;
+}
+
+function sumGroup(reps) {
+  const inc = reps.reduce((s, r) => s + parseFloat(r.total_income), 0);
+  const exp = reps.reduce((s, r) => s + parseFloat(r.total_expense), 0);
+  return { inc, exp, bal: inc - exp };
+}
+
+function PeriodCard({ title, sub, inc, exp, bal, onClick, tag }) {
+  const p = bal;
+  return (
+    <div className="day-card clickable-report" onClick={onClick} style={{ marginBottom: 10 }}>
+      <div className="day-card-head">
+        <div>
+          <div className="day-date">{title}</div>
+          {sub && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{sub}</div>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {tag && <span className="view-detail-tag">{tag}</span>}
+          <span className={`badge ${p >= 0 ? 'badge-profit' : 'badge-loss'}`}>
+            {p >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(p))}
+          </span>
+        </div>
+      </div>
+      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginTop: 10 }}>
+        <div className="metric" style={{ padding: '8px 12px' }}>
+          <div className="mlabel">Income</div>
+          <div className="mval inc" style={{ fontSize: 15 }}>{fmt(inc)}</div>
+        </div>
+        <div className="metric" style={{ padding: '8px 12px' }}>
+          <div className="mlabel">Expenses</div>
+          <div className="mval exp" style={{ fontSize: 15 }}>{fmt(exp)}</div>
+        </div>
+        <div className="metric" style={{ padding: '8px 12px' }}>
+          <div className="mlabel">Balance</div>
+          <div className={`mval ${p >= 0 ? 'bal' : 'loss'}`} style={{ fontSize: 15 }}>{fmt(bal)}</div>
+        </div>
+        <div className="metric" style={{ padding: '8px 12px', background: p >= 0 ? '#E1F5EE' : '#FAECE7' }}>
+          <div className="mlabel">{p >= 0 ? 'Profit' : 'Loss'}</div>
+          <div className={`mval ${p >= 0 ? 'profit' : 'loss'}`} style={{ fontSize: 15 }}>
+            {p >= 0 ? '📈' : '📉'} {fmt(Math.abs(p))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AllReportsView({ reports, onSelectDate }) {
+  const [period, setPeriod] = useState('daily');
+
+  if (reports.length === 0) {
+    return <div className="card"><p className="empty-msg">No reports yet.</p></div>;
+  }
+
+  // ── DAILY ──
+  const DailyView = () => (
+    <div>
+      <div className="period-section-title">📅 Daily reports — click any to view full details</div>
+      {reports.map(r => (
+        <PeriodCard
+          key={r.date}
+          title={fmtDate(r.date)}
+          inc={parseFloat(r.total_income)}
+          exp={parseFloat(r.total_expense)}
+          bal={parseFloat(r.balance)}
+          onClick={() => onSelectDate(r.date)}
+          tag="👁 View details"
+        />
+      ))}
+    </div>
+  );
+
+  // ── WEEKLY ──
+  const WeeklyView = () => {
+    const groups = groupReports(reports, getWeekKey);
+    const weeks = Object.keys(groups).sort().reverse();
+    return (
+      <div>
+        <div className="period-section-title">📆 Weekly summaries</div>
+        {weeks.map(weekStart => {
+          const reps = groups[weekStart];
+          const { inc, exp, bal } = sumGroup(reps);
+          const weekEnd = new Date(weekStart + 'T12:00:00');
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          const label = `Week of ${new Date(weekStart + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+          return (
+            <div key={weekStart}>
+              <PeriodCard
+                title={label}
+                sub={`${reps.length} report${reps.length > 1 ? 's' : ''} this week`}
+                inc={inc} exp={exp} bal={bal}
+              />
+              {/* Sub-list of daily reports in this week */}
+              <div style={{ marginLeft: 16, marginBottom: 8 }}>
+                {reps.map(r => (
+                  <div
+                    key={r.date}
+                    className="sub-report-row"
+                    onClick={() => onSelectDate(r.date)}
+                  >
+                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                      {parseFloat(r.balance) >= 0 ? '+' : ''}{fmt(r.balance)}
+                    </span>
+                    <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── MONTHLY ──
+  const MonthlyView = () => {
+    const groups = groupReports(reports, getMonthKey);
+    const months = Object.keys(groups).sort().reverse();
+    return (
+      <div>
+        <div className="period-section-title">🗓️ Monthly summaries</div>
+        {months.map(monthKey => {
+          const reps = groups[monthKey];
+          const { inc, exp, bal } = sumGroup(reps);
+          const label = new Date(monthKey + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+          return (
+            <div key={monthKey}>
+              <PeriodCard
+                title={label}
+                sub={`${reps.length} report${reps.length > 1 ? 's' : ''} this month`}
+                inc={inc} exp={exp} bal={bal}
+              />
+              <div style={{ marginLeft: 16, marginBottom: 8 }}>
+                {reps.map(r => (
+                  <div key={r.date} className="sub-report-row" onClick={() => onSelectDate(r.date)}>
+                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                      {fmt(r.balance)}
+                    </span>
+                    <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── YEARLY ──
+  const YearlyView = () => {
+    const groups = groupReports(reports, getYearKey);
+    const years = Object.keys(groups).sort().reverse();
+    return (
+      <div>
+        <div className="period-section-title">📊 Yearly summaries</div>
+        {years.map(year => {
+          const reps = groups[year];
+          const { inc, exp, bal } = sumGroup(reps);
+          const monthGroups = groupReports(reps, getMonthKey);
+          return (
+            <div key={year}>
+              <PeriodCard
+                title={`Year ${year}`}
+                sub={`${reps.length} report${reps.length > 1 ? 's' : ''} across ${Object.keys(monthGroups).length} month${Object.keys(monthGroups).length > 1 ? 's' : ''}`}
+                inc={inc} exp={exp} bal={bal}
+              />
+              <div style={{ marginLeft: 16, marginBottom: 8 }}>
+                {Object.keys(monthGroups).sort().reverse().map(mk => {
+                  const mreps = monthGroups[mk];
+                  const ms = sumGroup(mreps);
+                  return (
+                    <div key={mk} className="sub-report-row" style={{ cursor: 'default' }}>
+                      <span className="sub-report-date">{new Date(mk + '-01').toLocaleDateString('en-GB', { month: 'long' })}</span>
+                      <span className="sub-report-inc">Inc: {fmt(ms.inc)}</span>
+                      <span className="sub-report-exp">Exp: {fmt(ms.exp)}</span>
+                      <span className={`badge ${ms.bal >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                        {fmt(ms.bal)}
+                      </span>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>{mreps.length} days</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* Period switcher */}
+      <div className="period-tabs">
+        {[
+          { key: 'daily', label: '📅 Daily' },
+          { key: 'weekly', label: '📆 Weekly' },
+          { key: 'monthly', label: '🗓️ Monthly' },
+          { key: 'yearly', label: '📊 Yearly' },
+        ].map(p => (
+          <button
+            key={p.key}
+            className={period === p.key ? 'active' : ''}
+            onClick={() => setPeriod(p.key)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {period === 'daily' && <DailyView />}
+      {period === 'weekly' && <WeeklyView />}
+      {period === 'monthly' && <MonthlyView />}
+      {period === 'yearly' && <YearlyView />}
+    </div>
+  );
+}
+
 export default function DirectorDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('overview');
   const [reports, setReports] = useState([]);
@@ -288,54 +534,9 @@ export default function DirectorDashboard({ onLogout, user }) {
         </div>
       )}
 
-      {/* ALL REPORTS — clickable */}
+      {/* ALL REPORTS — with period tabs */}
       {tab === 'daily' && (
-        <div>
-          {reports.length === 0 ? (
-            <div className="card"><p className="empty-msg">No reports yet.</p></div>
-          ) : (
-            reports.map(r => {
-              const p = parseFloat(r.balance);
-              return (
-                <div
-                  key={r.date}
-                  className="day-card clickable-report"
-                  onClick={() => setSelectedDate(r.date)}
-                >
-                  <div className="day-card-head">
-                    <span className="day-date">{fmtDate(r.date)}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="view-detail-tag">👁 View details</span>
-                      <span className={`badge ${p >= 0 ? 'badge-profit' : 'badge-loss'}`}>
-                        {p >= 0 ? 'Profit' : 'Loss'}: {fmt(Math.abs(p))}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginTop: 10 }}>
-                    <div className="metric" style={{ padding: '8px 12px' }}>
-                      <div className="mlabel">Income</div>
-                      <div className="mval inc" style={{ fontSize: 15 }}>{fmt(r.total_income)}</div>
-                    </div>
-                    <div className="metric" style={{ padding: '8px 12px' }}>
-                      <div className="mlabel">Expenses</div>
-                      <div className="mval exp" style={{ fontSize: 15 }}>{fmt(r.total_expense)}</div>
-                    </div>
-                    <div className="metric" style={{ padding: '8px 12px' }}>
-                      <div className="mlabel">Balance</div>
-                      <div className={`mval ${p >= 0 ? 'bal' : 'loss'}`} style={{ fontSize: 15 }}>{fmt(r.balance)}</div>
-                    </div>
-                    <div className="metric" style={{ padding: '8px 12px', background: p >= 0 ? '#E1F5EE' : '#FAECE7' }}>
-                      <div className="mlabel">{p >= 0 ? 'Profit' : 'Loss'}</div>
-                      <div className={`mval ${p >= 0 ? 'profit' : 'loss'}`} style={{ fontSize: 15 }}>
-                        {p >= 0 ? '📈' : '📉'} {fmt(Math.abs(p))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <AllReportsView reports={reports} onSelectDate={setSelectedDate} />
       )}
     </div>
   );
