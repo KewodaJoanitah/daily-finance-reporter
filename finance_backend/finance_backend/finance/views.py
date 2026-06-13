@@ -91,14 +91,23 @@ class DailyReportListCreateView(APIView):
                     status=status.HTTP_409_CONFLICT
                 )
 
+            bank_deposit = float(request.data.get('bank_deposit', 0) or 0)
+            cash_returned = float(request.data.get('cash_returned', 0) or 0)
+
             if existing and is_update:
-                # Edit mode — update existing report
                 report = existing
+                report.bank_deposit = bank_deposit
+                report.cash_returned = cash_returned
+                report.save()
                 report.income_entries.all().delete()
                 report.expense_entries.all().delete()
             else:
-                # Create new report
-                report = DailyReport.objects.create(date=date, created_by=request.user)
+                report = DailyReport.objects.create(
+                    date=date,
+                    created_by=request.user,
+                    bank_deposit=bank_deposit,
+                    cash_returned=cash_returned,
+                )
 
             # Create income entries
             for i, entry in enumerate(income_entries):

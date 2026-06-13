@@ -299,8 +299,10 @@ export default function AccountantDashboard({ onLogout, user }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); // true = editing existing report
-  const [modal, setModal] = useState(null); // { message, date }
+  const [isEditing, setIsEditing] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [bankDeposit, setBankDeposit] = useState('');
+  const [cashReturned, setCashReturned] = useState('');
 
   const totalInc = incRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const totalExp = expRows.reduce((s, r) => s + (r.total || 0), 0);
@@ -324,7 +326,6 @@ export default function AccountantDashboard({ onLogout, user }) {
     setIsEditing(false);
     getReport(reportDate)
       .then(data => {
-        // Report exists for this date — load it in edit mode
         setIncRows(data.income_entries.map(e => ({
           id: e.id,
           label: e.label,
@@ -338,6 +339,8 @@ export default function AccountantDashboard({ onLogout, user }) {
           unit: e.unit_price || '',
           total: parseFloat(e.total) || 0,
         })));
+        setBankDeposit(data.bank_deposit || '');
+        setCashReturned(data.cash_returned || '');
         setIsEditing(true);
       })
       .catch(() => {
@@ -368,7 +371,9 @@ export default function AccountantDashboard({ onLogout, user }) {
           unit_price: r.unit !== '' && r.unit !== null && r.unit !== undefined ? parseFloat(r.unit) : null,
           order: i,
         })),
-        is_update: isEditing, // tell backend this is an update
+        bank_deposit: parseFloat(bankDeposit) || 0,
+        cash_returned: parseFloat(cashReturned) || 0,
+        is_update: isEditing,
       };
 
       await apiSaveReport(payload);
@@ -404,6 +409,8 @@ export default function AccountantDashboard({ onLogout, user }) {
     if (window.confirm('Clear all entries for this report?')) {
       setIncRows(defaultIncRows());
       setExpRows([]);
+      setBankDeposit('');
+      setCashReturned('');
     }
   }
 
@@ -545,6 +552,21 @@ export default function AccountantDashboard({ onLogout, user }) {
               <div className="col-block">
                 <div className="section-title expense-title">📤 Expenses</div>
                 <ExpenseTable rows={expRows} onChange={setExpRows} />
+              </div>
+            </div>
+
+            {/* BANK DEPOSIT SECTION */}
+            <div className="bank-section">
+              <div className="bank-section-title">🏦 Bank Deposit</div>
+              <div className="bank-field" style={{ maxWidth: 320 }}>
+                <label>Amount deposited to bank (UGX)</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={bankDeposit}
+                  onChange={e => setBankDeposit(e.target.value)}
+                  className="text-right"
+                />
               </div>
             </div>
 

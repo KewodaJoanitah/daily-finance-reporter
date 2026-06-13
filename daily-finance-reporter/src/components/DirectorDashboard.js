@@ -124,6 +124,15 @@ function ReportDetailModal({ date, onClose }) {
                 <div className="pv-sm">{fmt(Math.abs(profit))}</div>
               </div>
             </div>
+
+            {/* Bank Deposit */}
+            <div className="bank-section" style={{ marginTop: 16 }}>
+              <div className="bank-section-title">🏦 Bank Deposit</div>
+              <div className="bank-field" style={{ maxWidth: 320 }}>
+                <label>Amount deposited to bank</label>
+                <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -217,6 +226,8 @@ function AllReportsView({ reports, onSelectDate }) {
           inc={parseFloat(r.total_income)}
           exp={parseFloat(r.total_expense)}
           bal={parseFloat(r.balance)}
+          bankDeposit={parseFloat(r.bank_deposit || 0)}
+          cashReturned={parseFloat(r.cash_returned || 0)}
           onClick={() => onSelectDate(r.date)}
           tag="👁 View details"
         />
@@ -527,6 +538,15 @@ export default function DirectorDashboard({ onLogout, user }) {
                 </table>
                 <div className="total-row">
                   <span>Total expenses</span><span className="exp">{fmt(latest.total_expense)}</span>
+                </div>
+
+                {/* Bank Deposit */}
+                <div className="bank-section" style={{ marginTop: 16 }}>
+                  <div className="bank-section-title">🏦 Bank Deposit</div>
+                  <div className="bank-field" style={{ maxWidth: 320 }}>
+                    <label>Amount deposited to bank</label>
+                    <div className="bank-auto">{fmt(latest.bank_deposit || 0)}</div>
+                  </div>
                 </div>
               </div>
             </>

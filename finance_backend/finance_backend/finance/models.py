@@ -27,6 +27,10 @@ class DailyReport(models.Model):
     total_expense = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
+    # End of day bank & cash
+    bank_deposit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    cash_returned = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
     class Meta:
         ordering = ['-date']
 

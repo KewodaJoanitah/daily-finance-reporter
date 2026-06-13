@@ -495,3 +495,67 @@ body {
   color: #F07048;
   font-weight: 500;
 }
+
+/* ===== BANK DEPOSIT SECTION ===== */
+.bank-section {
+  margin-top: 1.4rem;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #EBF3FF, #E0EDFF);
+  border-radius: 14px;
+  border: 1.5px solid #bfdbfe;
+  margin-bottom: 1rem;
+}
+.bank-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #185FA5;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bank-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.bank-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bank-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #185FA5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.bank-field input {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #bfdbfe;
+  font-size: 14px;
+  font-family: 'DM Mono', monospace;
+  color: #1a1a2e;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.bank-field input:focus {
+  outline: none;
+  border-color: #185FA5;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+}
+.bank-auto {
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #185FA5;
+  color: #fff;
+  font-size: 14px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 600;
+  text-align: right;
+}
+@media (max-width: 650px) {
+  .bank-grid { grid-template-columns: 1fr; }
+}

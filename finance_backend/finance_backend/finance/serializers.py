@@ -42,6 +42,7 @@ class DailyReportSerializer(serializers.ModelSerializer):
         model = DailyReport
         fields = [
             'id', 'date', 'total_income', 'total_expense', 'balance',
+            'bank_deposit', 'cash_returned',
             'income_entries', 'expense_entries',
             'created_by_name', 'created_at', 'updated_at',
         ]
@@ -94,4 +95,4 @@ class DailyReportSummarySerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views — no nested entries."""
     class Meta:
         model = DailyReport
-        fields = ['id', 'date', 'total_income', 'total_expense', 'balance', 'updated_at']
+        fields = ['id', 'date', 'total_income', 'total_expense', 'balance', 'bank_deposit', 'cash_returned', 'updated_at']
