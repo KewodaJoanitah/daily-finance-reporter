@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getReports, getReport, getSummary } from '../api';
+import Calculator from './Calculator';
 import '../styles/Dashboard.css';
 
 function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
@@ -430,6 +431,7 @@ export default function DirectorDashboard({ onLogout, user }) {
             <div className="user-role">Reports &amp; overview</div>
           </div>
         </div>
+        <Calculator />
         <button className="btn-sm" onClick={onLogout}>Sign out</button>
       </div>
 

@@ -3,6 +3,7 @@ import IncomeTable from './IncomeTable';
 import ExpenseTable from './ExpenseTable';
 import { getReports, getReport, saveReport as apiSaveReport } from '../api';
 import { exportCSV } from '../utils/exportCSV';
+import Calculator from './Calculator';
 import '../styles/Dashboard.css';
 
 const today = new Date().toISOString().split('T')[0];
@@ -444,6 +445,7 @@ export default function AccountantDashboard({ onLogout, user }) {
         </div>
         <div className="topbar-actions">
           <button className="btn-sm" onClick={() => exportCSV(reports)}>⬇ Export CSV</button>
+          <Calculator />
           <button className="btn-sm" onClick={onLogout}>Sign out</button>
         </div>
       </div>
