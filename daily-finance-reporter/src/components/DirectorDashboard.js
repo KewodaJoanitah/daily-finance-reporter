@@ -126,12 +126,18 @@ function ReportDetailModal({ date, onClose }) {
               </div>
             </div>
 
-            {/* Bank Deposit */}
+            {/* Bank & Cash */}
             <div className="bank-section" style={{ marginTop: 16 }}>
-              <div className="bank-section-title">🏦 Bank Deposit</div>
-              <div className="bank-field" style={{ maxWidth: 320 }}>
-                <label>Amount deposited to bank</label>
-                <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
+              <div className="bank-section-title">🏦 Bank & Cash Summary</div>
+              <div className="bank-grid">
+                <div className="bank-field">
+                  <label>Deposited to bank</label>
+                  <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
+                </div>
+                <div className="bank-field">
+                  <label>Cash returned as balance b/f</label>
+                  <div className="bank-auto">{fmt(report.cash_returned || 0)}</div>
+                </div>
               </div>
             </div>
           </>
@@ -431,8 +437,10 @@ export default function DirectorDashboard({ onLogout, user }) {
             <div className="user-role">Reports &amp; overview</div>
           </div>
         </div>
-        <Calculator />
-        <button className="btn-sm" onClick={onLogout}>Sign out</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Calculator />
+          <button className="btn-sm" onClick={onLogout}>Sign out</button>
+        </div>
       </div>
 
       {/* SUMMARY WIDGETS */}
@@ -466,21 +474,21 @@ export default function DirectorDashboard({ onLogout, user }) {
               <div className="widget-value exp">{fmt(exp)}</div>
               <span className="change-tag neutral">All time</span>
             </div>
-            <div className="widget w-profit">
+            <div className="widget w-bank">
               <div className="widget-top">
-                <div className="widget-label">Profit</div>
-                <div className="widget-icon profit-icon">📈</div>
+                <div className="widget-label">Total banked</div>
+                <div className="widget-icon bank-icon">🏦</div>
               </div>
-              <div className="widget-value profit">{profit > 0 ? fmt(profit) : fmt(0)}</div>
-              <span className="profit-badge pos">{profit > 0 ? '▲ Overall profit' : '— No profit yet'}</span>
+              <div className="widget-value bank">{fmt(reports.reduce((s,r)=>s+parseFloat(r.bank_deposit||0),0))}</div>
+              <span className="change-tag neutral">All time deposits</span>
             </div>
-            <div className="widget w-loss">
+            <div className="widget w-bf">
               <div className="widget-top">
-                <div className="widget-label">Loss</div>
-                <div className="widget-icon loss-icon">📉</div>
+                <div className="widget-label">Total b/f returned</div>
+                <div className="widget-icon bf-icon">🔄</div>
               </div>
-              <div className="widget-value loss">{profit < 0 ? fmt(Math.abs(profit)) : fmt(0)}</div>
-              <span className="profit-badge neg">{profit < 0 ? '▼ Overall loss' : '— No loss'}</span>
+              <div className="widget-value bf">{fmt(reports.reduce((s,r)=>s+parseFloat(r.cash_returned||0),0))}</div>
+              <span className="change-tag neutral">Cash returned next day</span>
             </div>
           </div>
         );
@@ -530,24 +538,31 @@ export default function DirectorDashboard({ onLogout, user }) {
                     ) : latest.expense_entries.map(r => (
                       <tr key={r.id}>
                         <td><span className="badge badge-exp">{r.category}</span></td>
-                        <td>{r.item || '—'}</td>
-                        <td className="text-right">{r.qty || '—'}</td>
-                        <td className="text-right">{r.unit_price ? fmt(r.unit_price) : '—'}</td>
-                        <td className="text-right exp" style={{ fontWeight: 600 }}>{fmt(r.total)}</td>
+                        <td>{r.item || ''}</td>
+                        <td className="right">{r.qty ? parseFloat(r.qty).toLocaleString() : ''}</td>
+                        <td className="right">{r.unit_price ? fmt(r.unit_price) : ''}</td>
+                        <td className="right" style={{color:'#993C1D',fontWeight:700}}>{fmt(r.total)}</td>
                       </tr>
                     ))}
+                    <tr className="total-row">
+                      <td colSpan={4}>Total expenses</td>
+                      <td className="right" style={{color:'#993C1D'}}>{fmt(latest.total_expense)}</td>
+                    </tr>
                   </tbody>
                 </table>
-                <div className="total-row">
-                  <span>Total expenses</span><span className="exp">{fmt(latest.total_expense)}</span>
-                </div>
 
-                {/* Bank Deposit */}
+                {/* Bank & Cash */}
                 <div className="bank-section" style={{ marginTop: 16 }}>
-                  <div className="bank-section-title">🏦 Bank Deposit</div>
-                  <div className="bank-field" style={{ maxWidth: 320 }}>
-                    <label>Amount deposited to bank</label>
-                    <div className="bank-auto">{fmt(latest.bank_deposit || 0)}</div>
+                  <div className="bank-section-title">🏦 Bank & Cash Summary</div>
+                  <div className="bank-grid">
+                    <div className="bank-field">
+                      <label>Deposited to bank</label>
+                      <div className="bank-auto">{fmt(latest.bank_deposit || 0)}</div>
+                    </div>
+                    <div className="bank-field">
+                      <label>Cash returned as balance b/f</label>
+                      <div className="bank-auto">{fmt(latest.cash_returned || 0)}</div>
+                    </div>
                   </div>
                 </div>
               </div>

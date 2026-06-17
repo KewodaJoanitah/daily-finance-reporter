@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import IncomeTable from './IncomeTable';
 import ExpenseTable from './ExpenseTable';
 import { getReports, getReport, saveReport as apiSaveReport } from '../api';
+import { createPortal } from 'react-dom';
 import { exportCSV } from '../utils/exportCSV';
 import Calculator from './Calculator';
 import '../styles/Dashboard.css';
@@ -133,7 +134,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
 
   const DailyView = () => (
     <div>
-      <div className="period-section-title">📅 Daily reports — click any to edit</div>
+      <div className="period-section-title">📅 Daily reports — click today to edit, past reports to view</div>
       {reports.map(r => (
         <AccPeriodCard
           key={r.date}
@@ -142,7 +143,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
           exp={parseFloat(r.total_expense)}
           bal={parseFloat(r.balance)}
           onClick={() => onLoadReport(r.date)}
-          tag="✏️ Edit"
+          tag={r.date === today ? '✏️ Edit today' : '👁 View details'}
         />
       ))}
     </div>
@@ -176,7 +177,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
                     <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
                       {fmt(r.balance)}
                     </span>
-                    <span className="edit-tag" style={{ fontSize: 10 }}>✏️ Edit</span>
+                    <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
                   </div>
                 ))}
               </div>
@@ -213,7 +214,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
                     <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
                       {fmt(r.balance)}
                     </span>
-                    <span className="edit-tag" style={{ fontSize: 10 }}>✏️ Edit</span>
+                    <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
                   </div>
                 ))}
               </div>
@@ -291,6 +292,134 @@ function AccountantReportsView({ reports, onLoadReport }) {
   );
 }
 
+
+// ── Read-only Report Detail Modal (for accountant viewing past reports) ──
+function ReportDetailModal({ date, onClose }) {
+  const [report, setReport] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    getReport(date)
+      .then(data => setReport(data))
+      .catch(() => setReport(null))
+      .finally(() => setLoading(false));
+  }, [date]);
+
+  function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
+  function fmtDate(d) {
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+  }
+
+  const profit = report ? parseFloat(report.balance) : 0;
+
+  const modalEl = (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="detail-modal" onClick={e => e.stopPropagation()}>
+        <div className="detail-modal-header">
+          <div>
+            <div className="detail-modal-date">{fmtDate(date)}</div>
+            <div className="report-sub">Full report details — read only</div>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        {loading ? (
+          <p className="empty-msg" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</p>
+        ) : !report ? (
+          <p className="empty-msg">Could not load report.</p>
+        ) : (
+          <>
+            <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: '1.2rem' }}>
+              <div className="metric"><div className="mlabel">Income</div><div className="mval inc">{fmt(report.total_income)}</div></div>
+              <div className="metric"><div className="mlabel">Expenses</div><div className="mval exp">{fmt(report.total_expense)}</div></div>
+              <div className="metric"><div className="mlabel">Balance</div><div className={`mval ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(report.balance)}</div></div>
+              <div className="metric" style={{ background: profit >= 0 ? '#E1F5EE' : '#FAECE7' }}>
+                <div className="mlabel">{profit >= 0 ? 'Profit' : 'Loss'}</div>
+                <div className={`mval ${profit >= 0 ? 'profit' : 'loss'}`}>{profit >= 0 ? '📈' : '📉'} {fmt(Math.abs(profit))}</div>
+              </div>
+            </div>
+
+            <div className="detail-section-title inc-title">📥 Income</div>
+            <table className="report-table" style={{ marginBottom: 16 }}>
+              <thead><tr><th>Item</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
+              <tbody>
+                {report.income_entries.filter(r => parseFloat(r.amount) > 0).map(r => (
+                  <tr key={r.id}><td>{r.label}</td><td style={{ textAlign: 'right', color: '#0F6E56', fontWeight: 600 }}>{fmt(r.amount)}</td></tr>
+                ))}
+                <tr style={{ fontWeight: 700, background: '#f8f9fc' }}>
+                  <td>Total income</td>
+                  <td style={{ textAlign: 'right', color: '#0F6E56' }}>{fmt(report.total_income)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="detail-section-title exp-title">📤 Expenses</div>
+            <table className="expense-detail-table">
+              <thead>
+                <tr>
+                  <th style={{width:'20%'}}>Category</th>
+                  <th style={{width:'28%'}}>Item</th>
+                  <th className="right" style={{width:'10%'}}>Qty</th>
+                  <th className="right" style={{width:'20%'}}>Unit price</th>
+                  <th className="right" style={{width:'22%'}}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.expense_entries.length === 0 ? (
+                  <tr><td colSpan={5} className="empty-msg">No expenses</td></tr>
+                ) : report.expense_entries.map(r => (
+                  <tr key={r.id}>
+                    <td><span className="badge badge-exp">{r.category}</span></td>
+                    <td>{r.item || ''}</td>
+                    <td className="right">{r.qty ? parseFloat(r.qty).toLocaleString() : ''}</td>
+                    <td className="right">{r.unit_price ? fmt(r.unit_price) : ''}</td>
+                    <td className="right" style={{color:'#993C1D',fontWeight:700}}>{fmt(r.total)}</td>
+                  </tr>
+                ))}
+                <tr className="total-row">
+                  <td colSpan={4}>Total expenses</td>
+                  <td className="right" style={{color:'#993C1D'}}>{fmt(report.total_expense)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className={`profit-banner ${profit >= 0 ? 'pos' : 'neg'}`} style={{ marginTop: 16 }}>
+              <div>
+                <div className="pl">Balance carried forward</div>
+                <div className="pv">{fmt(report.balance)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="pl">{profit >= 0 ? 'Net profit' : 'Net loss'}</div>
+                <div className="pv-sm">{fmt(Math.abs(profit))}</div>
+              </div>
+            </div>
+
+            {(parseFloat(report.bank_deposit) > 0 || parseFloat(report.cash_returned) > 0) && (
+              <div className="bank-section" style={{ marginTop: 12 }}>
+                <div className="bank-section-title">🏦 Bank & Cash Summary</div>
+                <div className="bank-grid">
+                  <div className="bank-field">
+                    <label>Deposited to bank</label>
+                    <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
+                  </div>
+                  <div className="bank-field">
+                    <label>Cash returned as balance b/f</label>
+                    <div className="bank-auto">{fmt(report.cash_returned || 0)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  return createPortal(modalEl, document.body);
+}
+
 export default function AccountantDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('today');
   const [reportDate, setReportDate] = useState(today);
@@ -304,6 +433,7 @@ export default function AccountantDashboard({ onLogout, user }) {
   const [modal, setModal] = useState(null);
   const [bankDeposit, setBankDeposit] = useState('');
   const [cashReturned, setCashReturned] = useState('');
+  const [viewDate, setViewDate] = useState(null); // for read-only past report modal
 
   const totalInc = incRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const totalExp = expRows.reduce((s, r) => s + (r.total || 0), 0);
@@ -345,9 +475,11 @@ export default function AccountantDashboard({ onLogout, user }) {
         setIsEditing(true);
       })
       .catch(() => {
-        // No report for this date — fresh form
+        // No report for this date — fresh form, reset everything
         setIncRows(defaultIncRows());
         setExpRows([]);
+        setBankDeposit('');
+        setCashReturned('');
         setIsEditing(false);
       })
       .finally(() => setLoadingReport(false));
@@ -416,11 +548,13 @@ export default function AccountantDashboard({ onLogout, user }) {
   }
 
   function loadReport(date) {
-    setReportDate(date);
-    setTab('today');
-    // If loading a past report, mark it as editing mode
-    if (date !== today) {
-      setIsEditing(true);
+    if (date === today) {
+      // Today — go to edit form
+      setReportDate(date);
+      setTab('today');
+    } else {
+      // Past report — open read-only detail modal
+      setViewDate(date);
     }
   }
 
@@ -433,6 +567,11 @@ export default function AccountantDashboard({ onLogout, user }) {
           onClose={() => setModal(null)}
           onEdit={handleEditExisting}
         />
+      )}
+
+      {/* Read-only past report detail modal */}
+      {viewDate && (
+        <ReportDetailModal date={viewDate} onClose={() => setViewDate(null)} />
       )}
 
       <div className="topbar">
@@ -477,7 +616,7 @@ export default function AccountantDashboard({ onLogout, user }) {
                 <div className="widget-label">Total balance</div>
                 <div className="widget-icon bal">💰</div>
               </div>
-              <div className={`widget-value ${balance >= 0 ? '' : 'loss'}`}>{fmt(balance)}</div>
+              <div className={`widget-value ${balance >= 0 ? 'bal' : 'loss'}`}>{fmt(balance)}</div>
               <ChangeTag value={balChange} />
             </div>
             <div className="widget w-inc">
@@ -485,7 +624,7 @@ export default function AccountantDashboard({ onLogout, user }) {
                 <div className="widget-label">Income</div>
                 <div className="widget-icon inc">📥</div>
               </div>
-              <div className="widget-value">{fmt(totalInc)}</div>
+              <div className="widget-value inc">{fmt(totalInc)}</div>
               <ChangeTag value={incChange} />
             </div>
             <div className="widget w-exp">
@@ -493,32 +632,24 @@ export default function AccountantDashboard({ onLogout, user }) {
                 <div className="widget-label">Expense</div>
                 <div className="widget-icon exp">📤</div>
               </div>
-              <div className="widget-value">{fmt(totalExp)}</div>
+              <div className="widget-value exp">{fmt(totalExp)}</div>
               <ChangeTag value={expChange} />
             </div>
-            <div className="widget w-profit">
+            <div className="widget w-bank">
               <div className="widget-top">
-                <div className="widget-label">Profit</div>
-                <div className="widget-icon profit-icon">📈</div>
+                <div className="widget-label">Banked today</div>
+                <div className="widget-icon bank-icon">🏦</div>
               </div>
-              <div className="widget-value profit">
-                {balance > 0 ? fmt(balance) : fmt(0)}
-              </div>
-              <span className="profit-badge pos">
-                {balance > 0 ? '▲ In profit' : '— No profit yet'}
-              </span>
+              <div className="widget-value bank">{fmt(parseFloat(bankDeposit) || 0)}</div>
+              <span className="change-tag neutral">Deposited to bank</span>
             </div>
-            <div className="widget w-loss">
+            <div className="widget w-bf">
               <div className="widget-top">
-                <div className="widget-label">Loss</div>
-                <div className="widget-icon loss-icon">📉</div>
+                <div className="widget-label">Balance b/f tomorrow</div>
+                <div className="widget-icon bf-icon">🔄</div>
               </div>
-              <div className="widget-value loss">
-                {balance < 0 ? fmt(Math.abs(balance)) : fmt(0)}
-              </div>
-              <span className="profit-badge neg">
-                {balance < 0 ? '▼ In loss' : '— No loss'}
-              </span>
+              <div className="widget-value bf">{fmt(parseFloat(cashReturned) || 0)}</div>
+              <span className="change-tag neutral">Returned next day</span>
             </div>
           </div>
 
@@ -559,16 +690,28 @@ export default function AccountantDashboard({ onLogout, user }) {
 
             {/* BANK DEPOSIT SECTION */}
             <div className="bank-section">
-              <div className="bank-section-title">🏦 Bank Deposit</div>
-              <div className="bank-field" style={{ maxWidth: 320 }}>
-                <label>Amount deposited to bank (UGX)</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={bankDeposit}
-                  onChange={e => setBankDeposit(e.target.value)}
-                  className="text-right"
-                />
+              <div className="bank-section-title">🏦 Bank & Cash Summary</div>
+              <div className="bank-grid">
+                <div className="bank-field">
+                  <label>Amount deposited to bank (UGX)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={bankDeposit}
+                    onChange={e => setBankDeposit(e.target.value)}
+                    className="text-right"
+                  />
+                </div>
+                <div className="bank-field">
+                  <label>Cash returned as balance b/f tomorrow (UGX)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={cashReturned}
+                    onChange={e => setCashReturned(e.target.value)}
+                    className="text-right"
+                  />
+                </div>
               </div>
             </div>
 

@@ -715,3 +715,69 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   text-align: right;
 }
+
+/* ===== BANK & B/F WIDGETS ===== */
+.widget.w-bank::before { background: linear-gradient(90deg, #185FA5, #3B9EE8); }
+.widget.w-bf::before { background: linear-gradient(90deg, #7A5500, #F5C842); }
+
+.widget-icon.bank-icon { background: #EBF3FF; }
+.widget-icon.bf-icon { background: #FFF8E6; }
+
+.widget-value.bank { color: #185FA5; }
+.widget-value.bf { color: #7A5500; }
+
+/* ===== PROPER TABLE ===== */
+.proper-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.proper-table th,
+.proper-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.table-total-row td {
+  background: #f8f9fc;
+  border-top: 2px solid #e2e8f0 !important;
+  padding: 10px 10px !important;
+  font-size: 13px;
+}
+
+/* ===== PROPER EXPENSE TABLE WITH BORDERS ===== */
+.expense-detail-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.expense-detail-table th {
+  background: #f8f9fc;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+.expense-detail-table th.right { text-align: right; }
+.expense-detail-table td {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expense-detail-table td.right { text-align: right; }
+.expense-detail-table tr:hover td { background: #f8fafc; }
+.expense-detail-table .total-row td {
+  background: #f1f5f9;
+  font-weight: 700;
+  font-size: 13px;
+  border-top: 2px solid #cbd5e1;
+}
