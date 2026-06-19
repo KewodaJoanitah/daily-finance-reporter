@@ -396,21 +396,6 @@ function ReportDetailModal({ date, onClose }) {
               </div>
             </div>
 
-            {(parseFloat(report.bank_deposit) > 0 || parseFloat(report.cash_returned) > 0) && (
-              <div className="bank-section" style={{ marginTop: 12 }}>
-                <div className="bank-section-title">🏦 Bank & Cash Summary</div>
-                <div className="bank-grid">
-                  <div className="bank-field">
-                    <label>Deposited to bank</label>
-                    <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
-                  </div>
-                  <div className="bank-field">
-                    <label>Cash returned as balance b/f</label>
-                    <div className="bank-auto">{fmt(report.cash_returned || 0)}</div>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -431,8 +416,6 @@ export default function AccountantDashboard({ onLogout, user }) {
   const [loadingReport, setLoadingReport] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [modal, setModal] = useState(null);
-  const [bankDeposit, setBankDeposit] = useState('');
-  const [cashReturned, setCashReturned] = useState('');
   const [viewDate, setViewDate] = useState(null); // for read-only past report modal
 
   const totalInc = incRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
@@ -470,16 +453,12 @@ export default function AccountantDashboard({ onLogout, user }) {
           unit: e.unit_price || '',
           total: parseFloat(e.total) || 0,
         })));
-        setBankDeposit(data.bank_deposit || '');
-        setCashReturned(data.cash_returned || '');
         setIsEditing(true);
       })
       .catch(() => {
         // No report for this date — fresh form, reset everything
         setIncRows(defaultIncRows());
         setExpRows([]);
-        setBankDeposit('');
-        setCashReturned('');
         setIsEditing(false);
       })
       .finally(() => setLoadingReport(false));
@@ -504,8 +483,6 @@ export default function AccountantDashboard({ onLogout, user }) {
           unit_price: r.unit !== '' && r.unit !== null && r.unit !== undefined ? parseFloat(r.unit) : null,
           order: i,
         })),
-        bank_deposit: parseFloat(bankDeposit) || 0,
-        cash_returned: parseFloat(cashReturned) || 0,
         is_update: isEditing,
       };
 
@@ -542,8 +519,6 @@ export default function AccountantDashboard({ onLogout, user }) {
     if (window.confirm('Clear all entries for this report?')) {
       setIncRows(defaultIncRows());
       setExpRows([]);
-      setBankDeposit('');
-      setCashReturned('');
     }
   }
 
@@ -610,7 +585,7 @@ export default function AccountantDashboard({ onLogout, user }) {
       {tab === 'today' && (
         <>
           {/* WIDGETS */}
-          <div className="summary-widgets five-col">
+          <div className="summary-widgets">
             <div className="widget w-bal">
               <div className="widget-top">
                 <div className="widget-label">Total balance</div>
@@ -634,22 +609,6 @@ export default function AccountantDashboard({ onLogout, user }) {
               </div>
               <div className="widget-value exp">{fmt(totalExp)}</div>
               <ChangeTag value={expChange} />
-            </div>
-            <div className="widget w-bank">
-              <div className="widget-top">
-                <div className="widget-label">Banked today</div>
-                <div className="widget-icon bank-icon">🏦</div>
-              </div>
-              <div className="widget-value bank">{fmt(parseFloat(bankDeposit) || 0)}</div>
-              <span className="change-tag neutral">Deposited to bank</span>
-            </div>
-            <div className="widget w-bf">
-              <div className="widget-top">
-                <div className="widget-label">Balance b/f tomorrow</div>
-                <div className="widget-icon bf-icon">🔄</div>
-              </div>
-              <div className="widget-value bf">{fmt(parseFloat(cashReturned) || 0)}</div>
-              <span className="change-tag neutral">Returned next day</span>
             </div>
           </div>
 
@@ -685,33 +644,6 @@ export default function AccountantDashboard({ onLogout, user }) {
               <div className="col-block">
                 <div className="section-title expense-title">📤 Expenses</div>
                 <ExpenseTable rows={expRows} onChange={setExpRows} />
-              </div>
-            </div>
-
-            {/* BANK DEPOSIT SECTION */}
-            <div className="bank-section">
-              <div className="bank-section-title">🏦 Bank & Cash Summary</div>
-              <div className="bank-grid">
-                <div className="bank-field">
-                  <label>Amount deposited to bank (UGX)</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={bankDeposit}
-                    onChange={e => setBankDeposit(e.target.value)}
-                    className="text-right"
-                  />
-                </div>
-                <div className="bank-field">
-                  <label>Cash returned as balance b/f tomorrow (UGX)</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={cashReturned}
-                    onChange={e => setCashReturned(e.target.value)}
-                    className="text-right"
-                  />
-                </div>
               </div>
             </div>
 

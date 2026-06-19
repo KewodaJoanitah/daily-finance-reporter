@@ -125,21 +125,6 @@ function ReportDetailModal({ date, onClose }) {
                 <div className="pv-sm">{fmt(Math.abs(profit))}</div>
               </div>
             </div>
-
-            {/* Bank & Cash */}
-            <div className="bank-section" style={{ marginTop: 16 }}>
-              <div className="bank-section-title">🏦 Bank & Cash Summary</div>
-              <div className="bank-grid">
-                <div className="bank-field">
-                  <label>Deposited to bank</label>
-                  <div className="bank-auto">{fmt(report.bank_deposit || 0)}</div>
-                </div>
-                <div className="bank-field">
-                  <label>Cash returned as balance b/f</label>
-                  <div className="bank-auto">{fmt(report.cash_returned || 0)}</div>
-                </div>
-              </div>
-            </div>
           </>
         )}
       </div>
@@ -233,8 +218,6 @@ function AllReportsView({ reports, onSelectDate }) {
           inc={parseFloat(r.total_income)}
           exp={parseFloat(r.total_expense)}
           bal={parseFloat(r.balance)}
-          bankDeposit={parseFloat(r.bank_deposit || 0)}
-          cashReturned={parseFloat(r.cash_returned || 0)}
           onClick={() => onSelectDate(r.date)}
           tag="👁 View details"
         />
@@ -449,7 +432,7 @@ export default function DirectorDashboard({ onLogout, user }) {
         const exp = parseFloat(summary.total_expense);
         const profit = inc - exp;
         return (
-          <div className="summary-widgets five-col" style={{ marginBottom: '1.4rem' }}>
+          <div className="summary-widgets" style={{ marginBottom: '1.4rem' }}>
             <div className="widget w-bal">
               <div className="widget-top">
                 <div className="widget-label">Total balance</div>
@@ -473,22 +456,6 @@ export default function DirectorDashboard({ onLogout, user }) {
               </div>
               <div className="widget-value exp">{fmt(exp)}</div>
               <span className="change-tag neutral">All time</span>
-            </div>
-            <div className="widget w-bank">
-              <div className="widget-top">
-                <div className="widget-label">Total banked</div>
-                <div className="widget-icon bank-icon">🏦</div>
-              </div>
-              <div className="widget-value bank">{fmt(reports.reduce((s,r)=>s+parseFloat(r.bank_deposit||0),0))}</div>
-              <span className="change-tag neutral">All time deposits</span>
-            </div>
-            <div className="widget w-bf">
-              <div className="widget-top">
-                <div className="widget-label">Total b/f returned</div>
-                <div className="widget-icon bf-icon">🔄</div>
-              </div>
-              <div className="widget-value bf">{fmt(reports.reduce((s,r)=>s+parseFloat(r.cash_returned||0),0))}</div>
-              <span className="change-tag neutral">Cash returned next day</span>
             </div>
           </div>
         );
@@ -550,21 +517,6 @@ export default function DirectorDashboard({ onLogout, user }) {
                     </tr>
                   </tbody>
                 </table>
-
-                {/* Bank & Cash */}
-                <div className="bank-section" style={{ marginTop: 16 }}>
-                  <div className="bank-section-title">🏦 Bank & Cash Summary</div>
-                  <div className="bank-grid">
-                    <div className="bank-field">
-                      <label>Deposited to bank</label>
-                      <div className="bank-auto">{fmt(latest.bank_deposit || 0)}</div>
-                    </div>
-                    <div className="bank-field">
-                      <label>Cash returned as balance b/f</label>
-                      <div className="bank-auto">{fmt(latest.cash_returned || 0)}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </>
           )}
