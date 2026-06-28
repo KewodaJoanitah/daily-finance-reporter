@@ -4,6 +4,12 @@ function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
 function fmtPlain(n) { return Math.round(n).toString(); }
 
 // ── Date bucket helpers (self-contained, no external deps) ──────────────
+function getDayKey(dateStr) { return dateStr; }
+function dayLabel(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+  });
+}
 function getWeekKey(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   const day = d.getDay(); // 0=Sun..6=Sat
@@ -28,8 +34,14 @@ function yearLabel(yearKey) { return yearKey; }
 
 // Aggregates every report into buckets — no truncation, this is the full record.
 function buildFullSeries(reports, period) {
-  const keyFn = period === 'weekly' ? getWeekKey : period === 'monthly' ? getMonthKey : getYearKey;
-  const labelFn = period === 'weekly' ? weekRangeLabel : period === 'monthly' ? monthLabel : yearLabel;
+  const keyFn = period === 'daily' ? getDayKey
+    : period === 'weekly' ? getWeekKey
+    : period === 'monthly' ? getMonthKey
+    : getYearKey;
+  const labelFn = period === 'daily' ? dayLabel
+    : period === 'weekly' ? weekRangeLabel
+    : period === 'monthly' ? monthLabel
+    : yearLabel;
 
   const groups = {};
   reports.forEach(r => {
@@ -69,13 +81,14 @@ function downloadCSV(filename, headers, rows) {
 }
 
 const PERIOD_META = {
-  weekly: { label: 'Week', tabLabel: '📆 Weekly' },
-  monthly: { label: 'Month', tabLabel: '🗓️ Monthly' },
-  yearly: { label: 'Year', tabLabel: '📊 Yearly' },
+  daily: { label: 'Date', tabLabel: '📅 Daily', title: 'Daily breakdown' },
+  weekly: { label: 'Week', tabLabel: '📆 Weekly', title: 'Weekly breakdown' },
+  monthly: { label: 'Month', tabLabel: '🗓️ Monthly', title: 'Monthly breakdown' },
+  yearly: { label: 'Year', tabLabel: '📊 Yearly', title: 'Yearly breakdown' },
 };
 
 export default function ReportsTable({ reports }) {
-  const [period, setPeriod] = useState('monthly');
+  const [period, setPeriod] = useState('daily');
 
   if (!reports || reports.length === 0) {
     return <div className="card"><p className="empty-msg">No data yet to show in tables.</p></div>;
@@ -111,7 +124,7 @@ export default function ReportsTable({ reports }) {
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div className="card-title" style={{ marginBottom: 0 }}>{meta.label}ly breakdown</div>
+          <div className="card-title" style={{ marginBottom: 0 }}>{meta.title}</div>
           <button className="btn-sm" onClick={handleExport}>⬇ Export CSV</button>
         </div>
 
