@@ -75,9 +75,36 @@ export async function deleteReport(date) {
   return data;
 }
 
+export async function markReportsSeen() {
+  const { data } = await api.post('/reports/mark-seen/');
+  return data;
+}
+
 /* ===== SUMMARY ===== */
 export async function getSummary() {
   const { data } = await api.get('/summary/');
+  return data;
+}
+
+/* ===== MESSAGES & NOTIFICATIONS ===== */
+export async function getMessages() {
+  const { data } = await api.get('/messages/');
+  return data;
+}
+
+export async function sendMessage(body, recipientId = null) {
+  const payload = recipientId ? { body, recipient: recipientId } : { body };
+  const { data } = await api.post('/messages/', payload);
+  return data;
+}
+
+export async function markMessagesRead() {
+  const { data } = await api.post('/messages/mark-read/');
+  return data;
+}
+
+export async function getNotificationSummary() {
+  const { data } = await api.get('/notifications/summary/');
   return data;
 }
 

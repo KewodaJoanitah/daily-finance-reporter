@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getReports, getReport } from '../api';
 import Calculator from './Calculator';
+import MessagesPanel from './MessagesPanel';
 import Analytics from './Analytics';
 import ReportsTable from './ReportsTable';
 import '../styles/Dashboard.css';
@@ -450,6 +451,7 @@ export default function DirectorDashboard({ onLogout, user }) {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Calculator />
+          <MessagesPanel user={user} onViewNewReports={() => setTab('daily')} />
           <button className="btn-sm" onClick={onLogout}>Sign out</button>
         </div>
       </div>

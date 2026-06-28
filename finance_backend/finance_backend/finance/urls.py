@@ -6,6 +6,10 @@ from .views import (
     DailyReportListCreateView,
     DailyReportDetailView,
     SummaryView,
+    MessageListCreateView,
+    MarkMessagesReadView,
+    MarkReportsSeenView,
+    NotificationSummaryView,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -17,9 +21,17 @@ urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
 
     # Reports
+    # NOTE: 'reports/mark-seen/' must come BEFORE 'reports/<str:date>/' —
+    # otherwise Django would match "mark-seen" as a date value instead.
     path('reports/', DailyReportListCreateView.as_view(), name='reports'),
+    path('reports/mark-seen/', MarkReportsSeenView.as_view(), name='reports_mark_seen'),
     path('reports/<str:date>/', DailyReportDetailView.as_view(), name='report_detail'),
 
     # Summary
     path('summary/', SummaryView.as_view(), name='summary'),
+
+    # Messages & notifications
+    path('messages/', MessageListCreateView.as_view(), name='messages'),
+    path('messages/mark-read/', MarkMessagesReadView.as_view(), name='messages_mark_read'),
+    path('notifications/summary/', NotificationSummaryView.as_view(), name='notification_summary'),
 ]
