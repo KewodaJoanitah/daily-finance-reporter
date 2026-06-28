@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getReports, getReport } from '../api';
 import Calculator from './Calculator';
 import Analytics from './Analytics';
+import ReportsTable from './ReportsTable';
 import '../styles/Dashboard.css';
 
 function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
@@ -493,9 +494,11 @@ export default function DirectorDashboard({ onLogout, user }) {
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Latest report</button>
         <button className={tab === 'daily' ? 'active' : ''} onClick={() => setTab('daily')}>All reports</button>
         <button className={tab === 'analytics' ? 'active' : ''} onClick={() => setTab('analytics')}>📊 Analytics</button>
+        <button className={tab === 'tables' ? 'active' : ''} onClick={() => setTab('tables')}>📋 Tables</button>
       </div>
 
       {tab === 'analytics' && <Analytics reports={reports} />}
+      {tab === 'tables' && <ReportsTable reports={reports} />}
 
       {/* LATEST REPORT */}
       {tab === 'overview' && (

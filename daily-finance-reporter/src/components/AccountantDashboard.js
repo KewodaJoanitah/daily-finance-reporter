@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import IncomeTable from './IncomeTable';
 import ExpenseTable from './ExpenseTable';
 import Analytics from './Analytics';
+import ReportsTable from './ReportsTable';
 import { getReports, getReport, saveReport as apiSaveReport } from '../api';
 import { createPortal } from 'react-dom';
 import { exportCSV } from '../utils/exportCSV';
@@ -607,9 +608,13 @@ export default function AccountantDashboard({ onLogout, user }) {
         <button className={tab === 'analytics' ? 'active' : ''} onClick={() => setTab('analytics')}>
           📊 Analytics
         </button>
+        <button className={tab === 'tables' ? 'active' : ''} onClick={() => setTab('tables')}>
+          📋 Tables
+        </button>
       </div>
 
       {tab === 'analytics' && <Analytics reports={reports} />}
+      {tab === 'tables' && <ReportsTable reports={reports} />}
 
       {tab === 'today' && (
         <>
