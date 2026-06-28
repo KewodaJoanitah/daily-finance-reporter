@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,10 +8,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Sum
 import traceback
 
-from .models import User, DailyReport, IncomeEntry, ExpenseEntry
+from .models import User, DailyReport, IncomeEntry, ExpenseEntry, Message
 from .serializers import (
     LoginSerializer, UserSerializer,
     DailyReportSerializer, DailyReportSummarySerializer,
+    MessageSerializer,
 )
 
 
@@ -98,6 +100,8 @@ class DailyReportListCreateView(APIView):
                 report = existing
                 report.bank_deposit = bank_deposit
                 report.cash_returned = cash_returned
+                # A re-saved/edited report should re-flag for the director's attention
+                report.seen_by_director = False
                 report.save()
                 report.income_entries.all().delete()
                 report.expense_entries.all().delete()
@@ -180,3 +184,71 @@ class SummaryView(APIView):
             'total_balance': totals['total_balance'] or 0,
             'report_count': reports.count(),
         })
+
+
+class MessageListCreateView(APIView):
+    """List the conversation between the current user and the other role,
+    or send a new message (auto-routed to the opposite role unless a
+    specific recipient id is given)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        messages = Message.objects.filter(
+            Q(sender=request.user) | Q(recipient=request.user)
+        ).order_by('created_at')
+        return Response(MessageSerializer(messages, many=True).data)
+
+    def post(self, request):
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'error': 'Message body cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        opposite_role = 'director' if request.user.role == 'accountant' else 'accountant'
+        recipient_id = request.data.get('recipient')
+        if recipient_id:
+            recipient = User.objects.filter(id=recipient_id).first()
+        else:
+            recipient = User.objects.filter(role=opposite_role).exclude(id=request.user.id).first()
+
+        if not recipient:
+            return Response(
+                {'error': f'No {opposite_role} account found to send this message to.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            msg = Message.objects.create(sender=request.user, recipient=recipient, body=body)
+            return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MarkMessagesReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        Message.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+        return Response({'message': 'Messages marked as read.'})
+
+
+class MarkReportsSeenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'director':
+            return Response({'error': 'Only directors can mark reports as seen.'}, status=status.HTTP_403_FORBIDDEN)
+        DailyReport.objects.filter(seen_by_director=False).update(seen_by_director=True)
+        return Response({'message': 'Reports marked as seen.'})
+
+
+class NotificationSummaryView(APIView):
+    """Single endpoint both dashboards poll for badge counts."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        unread_messages = Message.objects.filter(recipient=request.user, is_read=False).count()
+        unseen_reports = 0
+        if request.user.role == 'director':
+            unseen_reports = DailyReport.objects.filter(seen_by_director=False).count()
+        return Response({'unread_messages': unread_messages, 'unseen_reports': unseen_reports})

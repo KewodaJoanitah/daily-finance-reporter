@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, DailyReport, IncomeEntry, ExpenseEntry
+from .models import User, DailyReport, IncomeEntry, ExpenseEntry, Message
 
 
 class LoginSerializer(serializers.Serializer):
@@ -42,7 +42,7 @@ class DailyReportSerializer(serializers.ModelSerializer):
         model = DailyReport
         fields = [
             'id', 'date', 'total_income', 'total_expense', 'balance',
-            'bank_deposit', 'cash_returned',
+            'bank_deposit', 'cash_returned', 'seen_by_director',
             'income_entries', 'expense_entries',
             'created_by_name', 'created_at', 'updated_at',
         ]
@@ -95,4 +95,23 @@ class DailyReportSummarySerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views — no nested entries."""
     class Meta:
         model = DailyReport
-        fields = ['id', 'date', 'total_income', 'total_expense', 'balance', 'bank_deposit', 'cash_returned', 'updated_at']
+        fields = ['id', 'date', 'total_income', 'total_expense', 'balance', 'bank_deposit', 'cash_returned', 'seen_by_director', 'updated_at']
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    recipient_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Message
+        fields = [
+            'id', 'sender', 'sender_name', 'recipient', 'recipient_name',
+            'body', 'created_at', 'is_read',
+        ]
+        read_only_fields = ['id', 'sender', 'recipient', 'created_at', 'is_read']
+
+    def get_sender_name(self, obj):
+        return f"{obj.sender.first_name} {obj.sender.last_name}".strip() or obj.sender.username
+
+    def get_recipient_name(self, obj):
+        return f"{obj.recipient.first_name} {obj.recipient.last_name}".strip() or obj.recipient.username

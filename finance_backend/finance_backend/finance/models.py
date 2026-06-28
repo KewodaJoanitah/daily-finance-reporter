@@ -31,6 +31,9 @@ class DailyReport(models.Model):
     bank_deposit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     cash_returned = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
+    # Notification tracking — has the director opened/seen this report yet?
+    seen_by_director = models.BooleanField(default=False)
+
     class Meta:
         ordering = ['-date']
 
@@ -99,3 +102,18 @@ class ExpenseEntry(models.Model):
 
     def __str__(self):
         return f"{self.category} - {self.item}: {self.total}"
+
+
+class Message(models.Model):
+    """Direct message between an accountant and a director."""
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.sender} → {self.recipient}: {self.body[:30]}"
