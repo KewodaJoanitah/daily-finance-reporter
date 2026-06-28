@@ -25,6 +25,7 @@ export default function MessagesPanel({ user, onViewNewReports }) {
   const [sending, setSending] = useState(false);
 
   const wrapRef = useRef(null);
+  const panelRef = useRef(null);
   const bottomRef = useRef(null);
 
   // Poll notification counts every 20s, regardless of whether the panel is open.
@@ -43,7 +44,9 @@ export default function MessagesPanel({ user, onViewNewReports }) {
   // Close the panel when clicking outside it.
   useEffect(() => {
     function handleOutsideClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      const clickedWrap = wrapRef.current && wrapRef.current.contains(e.target);
+      const clickedPanel = panelRef.current && panelRef.current.contains(e.target);
+      if (!clickedWrap && !clickedPanel) setOpen(false);
     }
     if (open) document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
@@ -102,7 +105,7 @@ export default function MessagesPanel({ user, onViewNewReports }) {
   const otherRoleLabel = user?.role === 'accountant' ? 'Director' : 'Accountant';
 
   const panel = (
-    <div className="notif-panel">
+    <div className="notif-panel" ref={panelRef}>
       {counts.unseen_reports > 0 && (
         <div className="notif-report-alert" onClick={handleViewReports}>
           📄 {counts.unseen_reports} new report{counts.unseen_reports > 1 ? 's' : ''} added — tap to view
