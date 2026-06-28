@@ -5,7 +5,6 @@ import Analytics from './Analytics';
 import ReportsTable from './ReportsTable';
 import { getReports, getReport, saveReport as apiSaveReport } from '../api';
 import { createPortal } from 'react-dom';
-import { exportCSV } from '../utils/exportCSV';
 import Calculator from './Calculator';
 import MessagesPanel from './MessagesPanel';
 import '../styles/Dashboard.css';
@@ -584,7 +583,6 @@ export default function AccountantDashboard({ onLogout, user }) {
           </div>
         </div>
         <div className="topbar-actions">
-          <button className="btn-sm" onClick={() => exportCSV(reports)}>⬇ Export CSV</button>
           <Calculator />
           <MessagesPanel user={user} />
           <button className="btn-sm" onClick={onLogout}>Sign out</button>

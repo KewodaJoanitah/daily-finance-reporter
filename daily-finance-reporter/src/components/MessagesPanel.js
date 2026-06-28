@@ -23,6 +23,7 @@ export default function MessagesPanel({ user, onViewNewReports }) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   const wrapRef = useRef(null);
   const panelRef = useRef(null);
@@ -82,12 +83,15 @@ export default function MessagesPanel({ user, onViewNewReports }) {
     const body = draft.trim();
     if (!body || sending) return;
     setSending(true);
-    setDraft('');
+    setSendError('');
     try {
       const msg = await sendMessage(body);
       setMessages(prev => [...prev, msg]);
+      setDraft(''); // only clear the box once we know it actually went through
     } catch (err) {
       console.error('Send message failed:', err);
+      const serverMsg = err?.response?.data?.error;
+      setSendError(serverMsg || 'Message failed to send. Check your connection and try again.');
     } finally {
       setSending(false);
     }
@@ -121,7 +125,7 @@ export default function MessagesPanel({ user, onViewNewReports }) {
           <p className="empty-msg">No messages yet. Say hello 👋</p>
         ) : (
           messages.map(m => (
-            <div key={m.id} className={`notif-bubble ${m.sender === user?.id ? 'sent' : 'received'}`}>
+            <div key={m.id} className={`notif-bubble ${String(m.sender) === String(user?.id) ? 'sent' : 'received'}`}>
               <div className="notif-bubble-text">{m.body}</div>
               <div className="notif-bubble-time">{timeAgo(m.created_at)}</div>
             </div>
@@ -130,12 +134,14 @@ export default function MessagesPanel({ user, onViewNewReports }) {
         <div ref={bottomRef} />
       </div>
 
+      {sendError && <div className="notif-error">{sendError}</div>}
+
       <div className="notif-composer">
         <input
           type="text"
           placeholder={`Message the ${otherRoleLabel.toLowerCase()}…`}
           value={draft}
-          onChange={e => setDraft(e.target.value)}
+          onChange={e => { setDraft(e.target.value); if (sendError) setSendError(''); }}
           onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
         />
         <button onClick={handleSend} disabled={sending || !draft.trim()}>Send</button>
