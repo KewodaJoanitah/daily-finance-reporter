@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { getReports, getReport, getSummary } from '../api';
+import { getReports, getReport } from '../api';
 import Calculator from './Calculator';
+import Analytics from './Analytics';
 import '../styles/Dashboard.css';
 
 function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
 function fmtDate(d) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+function fmtShortDate(d) {
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
   });
 }
 
@@ -202,16 +208,21 @@ function PeriodCard({ title, sub, inc, exp, bal, onClick, tag }) {
 
 function AllReportsView({ reports, onSelectDate }) {
   const [period, setPeriod] = useState('daily');
+  const [searchDate, setSearchDate] = useState('');
 
   if (reports.length === 0) {
     return <div className="card"><p className="empty-msg">No reports yet.</p></div>;
   }
 
+  const filteredReports = searchDate
+    ? reports.filter(r => r.date === searchDate)
+    : reports;
+
   // ── DAILY ──
   const DailyView = () => (
     <div>
       <div className="period-section-title">📅 Daily reports — click any to view full details</div>
-      {reports.map(r => (
+      {filteredReports.map(r => (
         <PeriodCard
           key={r.date}
           title={fmtDate(r.date)}
@@ -227,7 +238,7 @@ function AllReportsView({ reports, onSelectDate }) {
 
   // ── WEEKLY ──
   const WeeklyView = () => {
-    const groups = groupReports(reports, getWeekKey);
+    const groups = groupReports(filteredReports, getWeekKey);
     const weeks = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -272,7 +283,7 @@ function AllReportsView({ reports, onSelectDate }) {
 
   // ── MONTHLY ──
   const MonthlyView = () => {
-    const groups = groupReports(reports, getMonthKey);
+    const groups = groupReports(filteredReports, getMonthKey);
     const months = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -310,7 +321,7 @@ function AllReportsView({ reports, onSelectDate }) {
 
   // ── YEARLY ──
   const YearlyView = () => {
-    const groups = groupReports(reports, getYearKey);
+    const groups = groupReports(filteredReports, getYearKey);
     const years = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -352,6 +363,18 @@ function AllReportsView({ reports, onSelectDate }) {
 
   return (
     <div>
+      <div className="date-search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="date"
+          value={searchDate}
+          onChange={e => setSearchDate(e.target.value)}
+        />
+        {searchDate && (
+          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
+        )}
+      </div>
+
       {/* Period switcher */}
       <div className="period-tabs">
         {[
@@ -370,10 +393,16 @@ function AllReportsView({ reports, onSelectDate }) {
         ))}
       </div>
 
-      {period === 'daily' && <DailyView />}
-      {period === 'weekly' && <WeeklyView />}
-      {period === 'monthly' && <MonthlyView />}
-      {period === 'yearly' && <YearlyView />}
+      {filteredReports.length === 0 ? (
+        <div className="card"><p className="empty-msg">No report found for {fmtDate(searchDate)}.</p></div>
+      ) : (
+        <>
+          {period === 'daily' && <DailyView />}
+          {period === 'weekly' && <WeeklyView />}
+          {period === 'monthly' && <MonthlyView />}
+          {period === 'yearly' && <YearlyView />}
+        </>
+      )}
     </div>
   );
 }
@@ -381,16 +410,14 @@ function AllReportsView({ reports, onSelectDate }) {
 export default function DirectorDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('overview');
   const [reports, setReports] = useState([]);
-  const [summary, setSummary] = useState(null);
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null); // for modal
 
   useEffect(() => {
-    Promise.all([getReports(), getSummary()])
-      .then(([reps, sum]) => {
+    getReports()
+      .then(reps => {
         setReports(reps);
-        setSummary(sum);
         if (reps.length > 0) {
           return getReport(reps[0].date).then(full => setLatest(full));
         }
@@ -426,36 +453,37 @@ export default function DirectorDashboard({ onLogout, user }) {
         </div>
       </div>
 
-      {/* SUMMARY WIDGETS */}
-      {summary && (() => {
-        const inc = parseFloat(summary.total_income);
-        const exp = parseFloat(summary.total_expense);
-        const profit = inc - exp;
+      {/* SUMMARY WIDGETS — figures for the most recent day's report */}
+      {latest && (() => {
+        const inc = parseFloat(latest.total_income);
+        const exp = parseFloat(latest.total_expense);
+        const profit = parseFloat(latest.balance);
+        const dayTag = `📅 ${fmtShortDate(latest.date)}`;
         return (
           <div className="summary-widgets" style={{ marginBottom: '1.4rem' }}>
             <div className="widget w-bal">
               <div className="widget-top">
-                <div className="widget-label">Total balance</div>
+                <div className="widget-label">Balance</div>
                 <div className="widget-icon bal">💰</div>
               </div>
               <div className={`widget-value ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(profit)}</div>
-              <span className="change-tag neutral">{summary.report_count} reports total</span>
+              <span className="change-tag neutral">{dayTag}</span>
             </div>
             <div className="widget w-inc">
               <div className="widget-top">
-                <div className="widget-label">Total income</div>
+                <div className="widget-label">Income</div>
                 <div className="widget-icon inc">📥</div>
               </div>
               <div className="widget-value inc">{fmt(inc)}</div>
-              <span className="change-tag neutral">All time</span>
+              <span className="change-tag neutral">{dayTag}</span>
             </div>
             <div className="widget w-exp">
               <div className="widget-top">
-                <div className="widget-label">Total expenses</div>
+                <div className="widget-label">Expenses</div>
                 <div className="widget-icon exp">📤</div>
               </div>
               <div className="widget-value exp">{fmt(exp)}</div>
-              <span className="change-tag neutral">All time</span>
+              <span className="change-tag neutral">{dayTag}</span>
             </div>
           </div>
         );
@@ -464,7 +492,10 @@ export default function DirectorDashboard({ onLogout, user }) {
       <div className="tabs">
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Latest report</button>
         <button className={tab === 'daily' ? 'active' : ''} onClick={() => setTab('daily')}>All reports</button>
+        <button className={tab === 'analytics' ? 'active' : ''} onClick={() => setTab('analytics')}>📊 Analytics</button>
       </div>
+
+      {tab === 'analytics' && <Analytics reports={reports} />}
 
       {/* LATEST REPORT */}
       {tab === 'overview' && (

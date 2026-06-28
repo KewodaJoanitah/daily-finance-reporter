@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import IncomeTable from './IncomeTable';
 import ExpenseTable from './ExpenseTable';
+import Analytics from './Analytics';
 import { getReports, getReport, saveReport as apiSaveReport } from '../api';
 import { createPortal } from 'react-dom';
 import { exportCSV } from '../utils/exportCSV';
@@ -127,15 +128,20 @@ function AccPeriodCard({ title, sub, inc, exp, bal, onClick, tag }) {
 
 function AccountantReportsView({ reports, onLoadReport }) {
   const [period, setPeriod] = useState('daily');
+  const [searchDate, setSearchDate] = useState('');
 
   if (reports.length === 0) {
     return <div className="card"><p className="empty-msg">No saved reports yet.</p></div>;
   }
 
+  const filteredReports = searchDate
+    ? reports.filter(r => r.date === searchDate)
+    : reports;
+
   const DailyView = () => (
     <div>
       <div className="period-section-title">📅 Daily reports — click today to edit, past reports to view</div>
-      {reports.map(r => (
+      {filteredReports.map(r => (
         <AccPeriodCard
           key={r.date}
           title={fmtDate(r.date)}
@@ -150,7 +156,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
   );
 
   const WeeklyView = () => {
-    const groups = groupReportsAcc(reports, getWeekKeyAcc);
+    const groups = groupReportsAcc(filteredReports, getWeekKeyAcc);
     const weeks = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -189,7 +195,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
   };
 
   const MonthlyView = () => {
-    const groups = groupReportsAcc(reports, getMonthKeyAcc);
+    const groups = groupReportsAcc(filteredReports, getMonthKeyAcc);
     const months = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -226,7 +232,7 @@ function AccountantReportsView({ reports, onLoadReport }) {
   };
 
   const YearlyView = () => {
-    const groups = groupReportsAcc(reports, getYearKeyAcc);
+    const groups = groupReportsAcc(filteredReports, getYearKeyAcc);
     const years = Object.keys(groups).sort().reverse();
     return (
       <div>
@@ -268,6 +274,18 @@ function AccountantReportsView({ reports, onLoadReport }) {
 
   return (
     <div>
+      <div className="date-search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="date"
+          value={searchDate}
+          onChange={e => setSearchDate(e.target.value)}
+        />
+        {searchDate && (
+          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
+        )}
+      </div>
+
       <div className="period-tabs">
         {[
           { key: 'daily', label: '📅 Daily' },
@@ -284,10 +302,16 @@ function AccountantReportsView({ reports, onLoadReport }) {
           </button>
         ))}
       </div>
-      {period === 'daily' && <DailyView />}
-      {period === 'weekly' && <WeeklyView />}
-      {period === 'monthly' && <MonthlyView />}
-      {period === 'yearly' && <YearlyView />}
+      {filteredReports.length === 0 ? (
+        <div className="card"><p className="empty-msg">No report found for {fmtDate(searchDate)}.</p></div>
+      ) : (
+        <>
+          {period === 'daily' && <DailyView />}
+          {period === 'weekly' && <WeeklyView />}
+          {period === 'monthly' && <MonthlyView />}
+          {period === 'yearly' && <YearlyView />}
+        </>
+      )}
     </div>
   );
 }
@@ -580,7 +604,12 @@ export default function AccountantDashboard({ onLogout, user }) {
         <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
           Past reports
         </button>
+        <button className={tab === 'analytics' ? 'active' : ''} onClick={() => setTab('analytics')}>
+          📊 Analytics
+        </button>
       </div>
+
+      {tab === 'analytics' && <Analytics reports={reports} />}
 
       {tab === 'today' && (
         <>
