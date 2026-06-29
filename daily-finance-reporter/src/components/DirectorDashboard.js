@@ -260,22 +260,22 @@ function AllReportsView({ reports, onSelectDate }) {
               />
               {/* Sub-list of daily reports in this week */}
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                {reps.map(r => (
-                  <div
-                    key={r.date}
-                    className="sub-report-row"
-                    onClick={() => onSelectDate(r.date)}
-                  >
-                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
-                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
-                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
-                      {parseFloat(r.balance) >= 0 ? '+' : ''}{fmt(r.balance)}
-                    </span>
-                    <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
-                  </div>
-                ))}
-              </div>
+                  {reps.map(r => (
+                    <div
+                      key={r.date}
+                      className="sub-report-row"
+                      onClick={() => onSelectDate(r.date)}
+                    >
+                      <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                      <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                      <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                        {parseFloat(r.balance) >= 0 ? '+' : ''}{fmt(r.balance)}
+                      </span>
+                      <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
+                    </div>
+                  ))}
+                </div>
             </div>
           );
         })}
@@ -302,18 +302,18 @@ function AllReportsView({ reports, onSelectDate }) {
                 inc={inc} exp={exp} bal={bal}
               />
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                {reps.map(r => (
-                  <div key={r.date} className="sub-report-row" onClick={() => onSelectDate(r.date)}>
-                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
-                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
-                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
-                      {fmt(r.balance)}
-                    </span>
-                    <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
-                  </div>
-                ))}
-              </div>
+                  {reps.map(r => (
+                    <div key={r.date} className="sub-report-row" onClick={() => onSelectDate(r.date)}>
+                      <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                      <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                      <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                        {fmt(r.balance)}
+                      </span>
+                      <span className="view-detail-tag" style={{ fontSize: 10 }}>👁 Details</span>
+                    </div>
+                  ))}
+                </div>
             </div>
           );
         })}
@@ -355,7 +355,7 @@ function AllReportsView({ reports, onSelectDate }) {
                     </div>
                   );
                 })}
-              </div>
+                </div>
             </div>
           );
         })}
@@ -365,18 +365,6 @@ function AllReportsView({ reports, onSelectDate }) {
 
   return (
     <div>
-      <div className="date-search-bar">
-        <span className="search-icon">🔍</span>
-        <input
-          type="date"
-          value={searchDate}
-          onChange={e => setSearchDate(e.target.value)}
-        />
-        {searchDate && (
-          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
-        )}
-      </div>
-
       {/* Period switcher */}
       <div className="period-tabs">
         {[
@@ -393,6 +381,18 @@ function AllReportsView({ reports, onSelectDate }) {
             {p.label}
           </button>
         ))}
+      </div>
+
+      <div className="date-search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="date"
+          value={searchDate}
+          onChange={e => setSearchDate(e.target.value)}
+        />
+        {searchDate && (
+          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
+        )}
       </div>
 
       {filteredReports.length === 0 ? (
@@ -413,16 +413,23 @@ export default function DirectorDashboard({ onLogout, user }) {
   const [tab, setTab] = useState('overview');
   const [reports, setReports] = useState([]);
   const [latest, setLatest] = useState(null);
+  const [todayReport, setTodayReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null); // for modal
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     getReports()
       .then(reps => {
         setReports(reps);
         if (reps.length > 0) {
-          return getReport(reps[0].date).then(full => setLatest(full));
+          getReport(reps[0].date).then(full => setLatest(full)).catch(() => {});
         }
+        // Today's report is fetched separately — if the accountant hasn't
+        // filed anything yet today, this just stays null (shown as zeros),
+        // it's not treated as a load error.
+        getReport(todayStr).then(full => setTodayReport(full)).catch(() => setTodayReport(null));
       })
       .catch(err => console.error('Director load error:', err))
       .finally(() => setLoading(false));
@@ -456,42 +463,6 @@ export default function DirectorDashboard({ onLogout, user }) {
         </div>
       </div>
 
-      {/* SUMMARY WIDGETS — figures for the most recent day's report */}
-      {latest && (() => {
-        const inc = parseFloat(latest.total_income);
-        const exp = parseFloat(latest.total_expense);
-        const profit = parseFloat(latest.balance);
-        const dayTag = `📅 ${fmtShortDate(latest.date)}`;
-        return (
-          <div className="summary-widgets" style={{ marginBottom: '1.4rem' }}>
-            <div className="widget w-bal">
-              <div className="widget-top">
-                <div className="widget-label">Balance</div>
-                <div className="widget-icon bal">💰</div>
-              </div>
-              <div className={`widget-value ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(profit)}</div>
-              <span className="change-tag neutral">{dayTag}</span>
-            </div>
-            <div className="widget w-inc">
-              <div className="widget-top">
-                <div className="widget-label">Income</div>
-                <div className="widget-icon inc">📥</div>
-              </div>
-              <div className="widget-value inc">{fmt(inc)}</div>
-              <span className="change-tag neutral">{dayTag}</span>
-            </div>
-            <div className="widget w-exp">
-              <div className="widget-top">
-                <div className="widget-label">Expenses</div>
-                <div className="widget-icon exp">📤</div>
-              </div>
-              <div className="widget-value exp">{fmt(exp)}</div>
-              <span className="change-tag neutral">{dayTag}</span>
-            </div>
-          </div>
-        );
-      })()}
-
       <div className="tabs">
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Latest report</button>
         <button className={tab === 'daily' ? 'active' : ''} onClick={() => setTab('daily')}>All reports</button>
@@ -505,56 +476,80 @@ export default function DirectorDashboard({ onLogout, user }) {
       {/* LATEST REPORT */}
       {tab === 'overview' && (
         <div>
+          {/* SUMMARY WIDGETS — figures for today specifically, not the latest filed report */}
+          {(() => {
+            const inc = todayReport ? parseFloat(todayReport.total_income) : 0;
+            const exp = todayReport ? parseFloat(todayReport.total_expense) : 0;
+            const profit = todayReport ? parseFloat(todayReport.balance) : 0;
+            const dayTag = `📅 ${fmtShortDate(todayStr)}`;
+            return (
+              <div className="summary-widgets" style={{ marginBottom: '1.4rem' }}>
+                <div className="widget w-bal">
+                  <div className="widget-top">
+                    <div className="widget-label">Balance</div>
+                    <div className="widget-icon bal">💰</div>
+                  </div>
+                  <div className={`widget-value ${profit >= 0 ? 'bal' : 'loss'}`}>{fmt(profit)}</div>
+                  <span className="change-tag neutral">{dayTag}</span>
+                </div>
+                <div className="widget w-inc">
+                  <div className="widget-top">
+                    <div className="widget-label">Income</div>
+                    <div className="widget-icon inc">📥</div>
+                  </div>
+                  <div className="widget-value inc">{fmt(inc)}</div>
+                  <span className="change-tag neutral">{dayTag}</span>
+                </div>
+                <div className="widget w-exp">
+                  <div className="widget-top">
+                    <div className="widget-label">Expenses</div>
+                    <div className="widget-icon exp">📤</div>
+                  </div>
+                  <div className="widget-value exp">{fmt(exp)}</div>
+                  <span className="change-tag neutral">{dayTag}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           {!latest ? (
             <div className="card"><p className="empty-msg">No reports submitted yet.</p></div>
           ) : (
-            <>
-              <div className={`profit-banner ${parseFloat(latest.balance) >= 0 ? 'pos' : 'neg'}`}>
-                <div>
-                  <div className="pl">{fmtDate(latest.date)}</div>
-                  <div className="pv">{fmt(Math.abs(latest.balance))}</div>
-                  <div className="pl">{parseFloat(latest.balance) >= 0 ? 'Net profit' : 'Net loss'}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="pl">Balance carried forward</div>
-                  <div className="pv-sm">{fmt(latest.balance)}</div>
-                </div>
-              </div>
-              <div className="card">
-                <h3 className="card-title">Income</h3>
-                <table className="report-table" style={{ marginBottom: 16 }}>
-                  <thead><tr><th>Item</th><th className="text-right">Amount</th></tr></thead>
-                  <tbody>
-                    {latest.income_entries.filter(r => r.amount > 0).map(r => (
-                      <tr key={r.id}><td>{r.label}</td><td className="text-right inc" style={{ fontWeight: 600 }}>{fmt(r.amount)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-                <h3 className="card-title">Expenses</h3>
-                <table className="report-table">
-                  <thead>
-                    <tr><th>Category</th><th>Item</th><th className="text-right">Qty</th><th className="text-right">Unit price</th><th className="text-right">Total</th></tr>
-                  </thead>
-                  <tbody>
-                    {latest.expense_entries.length === 0 ? (
-                      <tr><td colSpan={5} className="empty-msg">No expenses</td></tr>
-                    ) : latest.expense_entries.map(r => (
-                      <tr key={r.id}>
-                        <td><span className="badge badge-exp">{r.category}</span></td>
-                        <td>{r.item || ''}</td>
-                        <td className="right">{r.qty ? parseFloat(r.qty).toLocaleString() : ''}</td>
-                        <td className="right">{r.unit_price ? fmt(r.unit_price) : ''}</td>
-                        <td className="right" style={{color:'#993C1D',fontWeight:700}}>{fmt(r.total)}</td>
-                      </tr>
-                    ))}
-                    <tr className="total-row">
-                      <td colSpan={4}>Total expenses</td>
-                      <td className="right" style={{color:'#993C1D'}}>{fmt(latest.total_expense)}</td>
+            <div className="card">
+              <h3 className="card-title">Most recent filed report — {fmtDate(latest.date)}</h3>
+              <h3 className="card-title">Income</h3>
+              <table className="report-table" style={{ marginBottom: 16 }}>
+                <thead><tr><th>Item</th><th className="text-right">Amount</th></tr></thead>
+                <tbody>
+                  {latest.income_entries.filter(r => r.amount > 0).map(r => (
+                    <tr key={r.id}><td>{r.label}</td><td className="text-right inc" style={{ fontWeight: 600 }}>{fmt(r.amount)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              <h3 className="card-title">Expenses</h3>
+              <table className="report-table">
+                <thead>
+                  <tr><th>Category</th><th>Item</th><th className="text-right">Qty</th><th className="text-right">Unit price</th><th className="text-right">Total</th></tr>
+                </thead>
+                <tbody>
+                  {latest.expense_entries.length === 0 ? (
+                    <tr><td colSpan={5} className="empty-msg">No expenses</td></tr>
+                  ) : latest.expense_entries.map(r => (
+                    <tr key={r.id}>
+                      <td><span className="badge badge-exp">{r.category}</span></td>
+                      <td>{r.item || ''}</td>
+                      <td className="right">{r.qty ? parseFloat(r.qty).toLocaleString() : ''}</td>
+                      <td className="right">{r.unit_price ? fmt(r.unit_price) : ''}</td>
+                      <td className="right" style={{color:'#993C1D',fontWeight:700}}>{fmt(r.total)}</td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  ))}
+                  <tr className="total-row">
+                    <td colSpan={4}>Total expenses</td>
+                    <td className="right" style={{color:'#993C1D'}}>{fmt(latest.total_expense)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

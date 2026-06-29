@@ -176,18 +176,18 @@ function AccountantReportsView({ reports, onLoadReport }) {
                 inc={inc} exp={exp} bal={bal}
               />
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                {reps.map(r => (
-                  <div key={r.date} className="sub-report-row" onClick={() => onLoadReport(r.date)}>
-                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
-                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
-                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
-                      {fmt(r.balance)}
-                    </span>
-                    <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
-                  </div>
-                ))}
-              </div>
+                  {reps.map(r => (
+                    <div key={r.date} className="sub-report-row" onClick={() => onLoadReport(r.date)}>
+                      <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                      <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                      <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                        {fmt(r.balance)}
+                      </span>
+                      <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
+                    </div>
+                  ))}
+                </div>
             </div>
           );
         })}
@@ -213,18 +213,18 @@ function AccountantReportsView({ reports, onLoadReport }) {
                 inc={inc} exp={exp} bal={bal}
               />
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                {reps.map(r => (
-                  <div key={r.date} className="sub-report-row" onClick={() => onLoadReport(r.date)}>
-                    <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
-                    <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
-                    <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
-                      {fmt(r.balance)}
-                    </span>
-                    <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
-                  </div>
-                ))}
-              </div>
+                  {reps.map(r => (
+                    <div key={r.date} className="sub-report-row" onClick={() => onLoadReport(r.date)}>
+                      <span className="sub-report-date">{new Date(r.date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      <span className="sub-report-inc">Inc: {fmt(r.total_income)}</span>
+                      <span className="sub-report-exp">Exp: {fmt(r.total_expense)}</span>
+                      <span className={`badge ${parseFloat(r.balance) >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                        {fmt(r.balance)}
+                      </span>
+                      <span className="edit-tag" style={{ fontSize: 10 }}>{r.date === today ? "✏️ Edit" : "👁 View"}</span>
+                    </div>
+                  ))}
+                </div>
             </div>
           );
         })}
@@ -250,22 +250,22 @@ function AccountantReportsView({ reports, onLoadReport }) {
                 inc={inc} exp={exp} bal={bal}
               />
               <div style={{ marginLeft: 16, marginBottom: 8 }}>
-                {Object.keys(monthGroups).sort().reverse().map(mk => {
-                  const mreps = monthGroups[mk];
-                  const ms = sumGroupAcc(mreps);
-                  return (
-                    <div key={mk} className="sub-report-row" style={{ cursor: 'default' }}>
-                      <span className="sub-report-date">{new Date(mk + '-01').toLocaleDateString('en-GB', { month: 'long' })}</span>
-                      <span className="sub-report-inc">Inc: {fmt(ms.inc)}</span>
-                      <span className="sub-report-exp">Exp: {fmt(ms.exp)}</span>
-                      <span className={`badge ${ms.bal >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
-                        {fmt(ms.bal)}
-                      </span>
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>{mreps.length} days</span>
-                    </div>
-                  );
-                })}
-              </div>
+                  {Object.keys(monthGroups).sort().reverse().map(mk => {
+                    const mreps = monthGroups[mk];
+                    const ms = sumGroupAcc(mreps);
+                    return (
+                      <div key={mk} className="sub-report-row" style={{ cursor: 'default' }}>
+                        <span className="sub-report-date">{new Date(mk + '-01').toLocaleDateString('en-GB', { month: 'long' })}</span>
+                        <span className="sub-report-inc">Inc: {fmt(ms.inc)}</span>
+                        <span className="sub-report-exp">Exp: {fmt(ms.exp)}</span>
+                        <span className={`badge ${ms.bal >= 0 ? 'badge-profit' : 'badge-loss'}`} style={{ fontSize: 10 }}>
+                          {fmt(ms.bal)}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{mreps.length} days</span>
+                      </div>
+                    );
+                  })}
+                </div>
             </div>
           );
         })}
@@ -275,18 +275,6 @@ function AccountantReportsView({ reports, onLoadReport }) {
 
   return (
     <div>
-      <div className="date-search-bar">
-        <span className="search-icon">🔍</span>
-        <input
-          type="date"
-          value={searchDate}
-          onChange={e => setSearchDate(e.target.value)}
-        />
-        {searchDate && (
-          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
-        )}
-      </div>
-
       <div className="period-tabs">
         {[
           { key: 'daily', label: '📅 Daily' },
@@ -303,6 +291,19 @@ function AccountantReportsView({ reports, onLoadReport }) {
           </button>
         ))}
       </div>
+
+      <div className="date-search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="date"
+          value={searchDate}
+          onChange={e => setSearchDate(e.target.value)}
+        />
+        {searchDate && (
+          <button className="date-search-clear" onClick={() => setSearchDate('')}>✕ Clear</button>
+        )}
+      </div>
+
       {filteredReports.length === 0 ? (
         <div className="card"><p className="empty-msg">No report found for {fmtDate(searchDate)}.</p></div>
       ) : (
