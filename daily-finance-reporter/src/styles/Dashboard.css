@@ -868,6 +868,26 @@ body {
   text-align: right;
 }
 
+/* ===== FORM INPUT PLAIN (used in user management form) ===== */
+.form-input-plain {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: #1a1a2e;
+  background: #f8fafc;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.form-input-plain:focus {
+  outline: none;
+  border-color: #185FA5;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.08);
+}
+
 /* ===== PROPER TABLE ===== */
 .proper-table {
   table-layout: fixed;

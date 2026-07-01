@@ -10,10 +10,15 @@ import traceback
 
 from .models import User, DailyReport, IncomeEntry, ExpenseEntry, Message
 from .serializers import (
-    LoginSerializer, UserSerializer,
+    LoginSerializer, UserSerializer, UserCreateSerializer, UserManageSerializer,
     DailyReportSerializer, DailyReportSummarySerializer,
     MessageSerializer,
 )
+
+
+def is_admin(user):
+    """Only directors with is_staff=True can manage users."""
+    return user.is_authenticated and user.role == 'director' and user.is_staff
 
 
 class LoginView(APIView):
@@ -30,6 +35,11 @@ class LoginView(APIView):
             return Response(
                 {'error': 'Invalid username or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not user.is_active:
+            return Response(
+                {'error': 'This account has been deactivated. Please contact the director.'},
+                status=status.HTTP_403_FORBIDDEN
             )
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -58,6 +68,90 @@ class MeView(APIView):
         return Response(UserSerializer(request.user).data)
 
 
+class UserListCreateView(APIView):
+    """
+    Admin director only.
+    GET  /api/users/  — list all users
+    POST /api/users/  — create a new user
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not is_admin(request.user):
+            return Response({'error': 'Only the admin director can manage users.'}, status=status.HTTP_403_FORBIDDEN)
+        users = User.objects.all().order_by('role', 'username')
+        return Response(UserSerializer(users, many=True).data)
+
+    def post(self, request):
+        if not is_admin(request.user):
+            return Response({'error': 'Only the admin director can create users.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = UserCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = serializer.save()
+            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserDetailView(APIView):
+    """
+    Admin director only.
+    PATCH  /api/users/<id>/  — update role or active status
+    DELETE /api/users/<id>/  — deactivate (soft delete — data is preserved)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return None
+
+    def patch(self, request, user_id):
+        if not is_admin(request.user):
+            return Response({'error': 'Only the admin director can update users.'}, status=status.HTTP_403_FORBIDDEN)
+
+        target = self.get_user(user_id)
+        if not target:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Prevent the admin director from removing their own admin status
+        if target.id == request.user.id and 'is_staff' in request.data and not request.data['is_staff']:
+            return Response({'error': 'You cannot remove your own admin status.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = UserManageSerializer(target, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = serializer.save()
+            return Response(UserSerializer(user).data)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, user_id):
+        if not is_admin(request.user):
+            return Response({'error': 'Only the admin director can deactivate users.'}, status=status.HTTP_403_FORBIDDEN)
+
+        target = self.get_user(user_id)
+        if not target:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if target.id == request.user.id:
+            return Response({'error': 'You cannot deactivate your own account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Soft-delete: deactivate rather than delete so report history is preserved
+        target.is_active = False
+        target.save()
+        return Response({'message': f'{target.username} has been deactivated.'})
+
+
 class DailyReportListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -81,7 +175,6 @@ class DailyReportListCreateView(APIView):
             existing = DailyReport.objects.filter(date=date).first()
 
             if existing and not is_update:
-                # Report exists but not in edit mode — warn user
                 from datetime import datetime
                 fmt_date = datetime.strptime(date, '%Y-%m-%d').strftime('%A, %d %B %Y')
                 return Response(
@@ -100,7 +193,6 @@ class DailyReportListCreateView(APIView):
                 report = existing
                 report.bank_deposit = bank_deposit
                 report.cash_returned = cash_returned
-                # A re-saved/edited report should re-flag for the director's attention
                 report.seen_by_director = False
                 report.save()
                 report.income_entries.all().delete()
@@ -113,7 +205,6 @@ class DailyReportListCreateView(APIView):
                     cash_returned=cash_returned,
                 )
 
-            # Create income entries
             for i, entry in enumerate(income_entries):
                 IncomeEntry.objects.create(
                     report=report,
@@ -122,7 +213,6 @@ class DailyReportListCreateView(APIView):
                     order=i
                 )
 
-            # Create expense entries
             for i, entry in enumerate(expense_entries):
                 qty = entry.get('qty')
                 unit_price = entry.get('unit_price')
@@ -138,9 +228,7 @@ class DailyReportListCreateView(APIView):
                     order=i
                 )
 
-            # Recalculate totals
             report.recalculate_totals()
-
             return Response(DailyReportSerializer(report).data, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -187,9 +275,6 @@ class SummaryView(APIView):
 
 
 class MessageListCreateView(APIView):
-    """List the conversation between the current user and the other role,
-    or send a new message (auto-routed to the opposite role unless a
-    specific recipient id is given)."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -243,7 +328,6 @@ class MarkReportsSeenView(APIView):
 
 
 class NotificationSummaryView(APIView):
-    """Single endpoint both dashboards poll for badge counts."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

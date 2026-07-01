@@ -10,7 +10,47 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'is_staff', 'is_active']
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Used by the admin director to create new user accounts."""
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'first_name', 'last_name', 'role']
+
+    def validate_role(self, value):
+        valid_roles = [r[0] for r in User.ROLE_CHOICES]
+        if value not in valid_roles:
+            raise serializers.ValidationError(f'Role must be one of: {", ".join(valid_roles)}')
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('A user with this username already exists.')
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('A user with this email already exists.')
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserManageSerializer(serializers.ModelSerializer):
+    """Used by the admin director to update role or active status of an existing user."""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'is_staff', 'is_active']
+        read_only_fields = ['id', 'username', 'email']
 
 
 class IncomeEntrySerializer(serializers.ModelSerializer):
@@ -56,37 +96,27 @@ class DailyReportSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         income_data = validated_data.pop('income_entries', [])
         expense_data = validated_data.pop('expense_entries', [])
-
         report = DailyReport.objects.create(**validated_data)
-
         for i, entry in enumerate(income_data):
             IncomeEntry.objects.create(report=report, order=i, **entry)
-
         for i, entry in enumerate(expense_data):
-            # Remove 'total' if present since it's auto-calculated
             entry.pop('total', None)
             ExpenseEntry.objects.create(report=report, order=i, **entry)
-
         report.recalculate_totals()
         return report
 
     def update(self, instance, validated_data):
         income_data = validated_data.pop('income_entries', [])
         expense_data = validated_data.pop('expense_entries', [])
-
         instance.date = validated_data.get('date', instance.date)
         instance.save()
-
         instance.income_entries.all().delete()
         instance.expense_entries.all().delete()
-
         for i, entry in enumerate(income_data):
             IncomeEntry.objects.create(report=instance, order=i, **entry)
-
         for i, entry in enumerate(expense_data):
             entry.pop('total', None)
             ExpenseEntry.objects.create(report=instance, order=i, **entry)
-
         instance.recalculate_totals()
         return instance
 

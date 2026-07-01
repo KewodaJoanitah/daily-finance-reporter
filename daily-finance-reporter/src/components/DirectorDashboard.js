@@ -4,6 +4,7 @@ import Calculator from './Calculator';
 import MessagesPanel from './MessagesPanel';
 import Analytics from './Analytics';
 import ReportsTable from './ReportsTable';
+import UserManagement from './UserManagement';
 import '../styles/Dashboard.css';
 
 function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString(); }
@@ -468,10 +469,14 @@ export default function DirectorDashboard({ onLogout, user }) {
         <button className={tab === 'daily' ? 'active' : ''} onClick={() => setTab('daily')}>All reports</button>
         <button className={tab === 'analytics' ? 'active' : ''} onClick={() => setTab('analytics')}>📊 Analytics</button>
         <button className={tab === 'tables' ? 'active' : ''} onClick={() => setTab('tables')}>📋 Tables</button>
+        {user?.is_staff && (
+          <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>👥 Users</button>
+        )}
       </div>
 
       {tab === 'analytics' && <Analytics reports={reports} />}
       {tab === 'tables' && <ReportsTable reports={reports} />}
+      {tab === 'users' && user?.is_staff && <UserManagement currentUser={user} />}
 
       {/* LATEST REPORT */}
       {tab === 'overview' && (

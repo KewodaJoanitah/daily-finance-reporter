@@ -54,6 +54,27 @@ export async function getMe() {
   return data;
 }
 
+/* ===== USER MANAGEMENT (admin director only) ===== */
+export async function getUsers() {
+  const { data } = await api.get('/users/');
+  return data;
+}
+
+export async function createUser(userData) {
+  const { data } = await api.post('/users/', userData);
+  return data;
+}
+
+export async function updateUser(userId, updates) {
+  const { data } = await api.patch(`/users/${userId}/`, updates);
+  return data;
+}
+
+export async function deactivateUser(userId) {
+  const { data } = await api.delete(`/users/${userId}/`);
+  return data;
+}
+
 /* ===== REPORTS ===== */
 export async function getReports() {
   const { data } = await api.get('/reports/');

@@ -10,6 +10,8 @@ from .views import (
     MarkMessagesReadView,
     MarkReportsSeenView,
     NotificationSummaryView,
+    UserListCreateView,
+    UserDetailView,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -20,9 +22,11 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('me/', MeView.as_view(), name='me'),
 
-    # Reports
-    # NOTE: 'reports/mark-seen/' must come BEFORE 'reports/<str:date>/' —
-    # otherwise Django would match "mark-seen" as a date value instead.
+    # User management (admin director only)
+    path('users/', UserListCreateView.as_view(), name='users'),
+    path('users/<int:user_id>/', UserDetailView.as_view(), name='user_detail'),
+
+    # Reports — mark-seen must come BEFORE <str:date> to avoid swallowing the slug
     path('reports/', DailyReportListCreateView.as_view(), name='reports'),
     path('reports/mark-seen/', MarkReportsSeenView.as_view(), name='reports_mark_seen'),
     path('reports/<str:date>/', DailyReportDetailView.as_view(), name='report_detail'),
